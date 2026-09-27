@@ -1,0 +1,15 @@
+# Datos crudos: pesan demasiado para GitHub, cada quien los baja localmente
+data/raw/*.csv
+data/raw/*.CSV
+
+# Outputs grandes derivados (deja pasar agregados chicos si quieren versionarlos)
+data/processed/trips_clean.parquet
+
+# Entorno
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Sistema
+.DS_Store
