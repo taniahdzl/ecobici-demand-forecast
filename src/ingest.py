@@ -103,14 +103,32 @@ def build_dataset() -> pd.DataFrame:
     df["fecha"] = df["origen_dt"].dt.date
     df["es_fin_de_semana"] = df["origen_dt"].dt.dayofweek >= 5
 
-    # ids de estación como string (evita que pandas los trate como floats con .0).
-    # Algunos registros traen ids corruptos (ej. "192-193", dos ids pegados) —
-    # se convierten a nulo en vez de tronar, y se reporta cuántos fueron.
+    # ids de estación: la mayoría de los "no numéricos" son estaciones pareadas
+    # reales (ej. "271-272", confirmado contra el catálogo GBFS: ambos números
+    # existen como estaciones activas). Se clasifican en vez de solo borrarse,
+    # para poder excluirlas del análisis por-estación sin perder el viaje del
+    # análisis agregado (por hora/día).
+    import re
+    patron_par = re.compile(r"^\d+-\d+$")
+    patron_temporal = re.compile(r"^temporal", re.IGNORECASE)
+
     for col in ["estacion_origen", "estacion_destino"]:
+        raw_str = df[col].astype(str)
+        tipo_col = col + "_tipo"
+
+        df[tipo_col] = "valido"
+        df.loc[raw_str.str.match(patron_par), tipo_col] = "par_estaciones"
+        df.loc[raw_str.str.match(patron_temporal), tipo_col] = "temporal"
+
         numeric = pd.to_numeric(df[col], errors="coerce")
-        n_corruptos = numeric.isna().sum() - df[col].isna().sum()
-        if n_corruptos > 0:
-            print(f"  aviso: {n_corruptos} valores no numéricos en '{col}' -> convertidos a nulo")
+        no_validos = numeric.isna() & df[col].notna()
+        df.loc[no_validos & (df[tipo_col] == "valido"), tipo_col] = "otro_no_numerico"
+
+        n_par = (df[tipo_col] == "par_estaciones").sum()
+        n_temp = (df[tipo_col] == "temporal").sum()
+        n_otro = (df[tipo_col] == "otro_no_numerico").sum()
+        print(f"  {col}: {n_par} pares de estaciones, {n_temp} temporales, {n_otro} otros no numéricos")
+
         df[col] = numeric.astype("Int64").astype("string")
     return df
 
