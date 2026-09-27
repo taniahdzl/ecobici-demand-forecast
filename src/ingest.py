@@ -23,25 +23,32 @@ import pandas as pd
 RAW_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "raw")
 PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
 
-# Algunos meses vienen con nombres de columna distintos (mayúsculas, acentos,
-# variaciones de "Ciclo_Estacion" vs "CicloEstacion"). Este mapa normaliza
-# los que nos hemos encontrado; si un CSV nuevo trae otros nombres, agrégalos aquí.
+# Algunos meses vienen con nombres de columna ligeramente distintos
+# (mayúsculas, con o sin guión bajo entre palabras, ej. "Ciclo_EstacionArribo"
+# vs "Ciclo_Estacion_Arribo"). Para no depender de que cada variante esté
+# escrita exactamente, la normalización quita TODOS los guiones bajos y
+# compara en minúsculas, así "Ciclo_Estacion_Arribo" y "Ciclo_EstacionArribo"
+# terminan siendo la misma clave ("cicloestacionarribo").
 COLUMN_ALIASES = {
-    "genero_usuario": "genero",
-    "edad_usuario": "edad",
+    "generousuario": "genero",
+    "edadusuario": "edad",
     "bici": "bici_id",
-    "ciclo_estacion_retiro": "estacion_origen",
-    "fecha_retiro": "fecha_origen",
-    "hora_retiro": "hora_origen",
-    "ciclo_estacion_arribo": "estacion_destino",
-    "fecha_arribo": "fecha_destino",
-    "hora_arribo": "hora_destino",
+    "cicloestacionretiro": "estacion_origen",
+    "fecharetiro": "fecha_origen",
+    "horaretiro": "hora_origen",
+    "cicloestacionarribo": "estacion_destino",
+    "fechaarribo": "fecha_destino",
+    "horaarribo": "hora_destino",
 }
 
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    df.columns = [c.strip().lower() for c in df.columns]
-    df = df.rename(columns=COLUMN_ALIASES)
+    # clave de comparación: minúsculas, sin espacios ni guiones bajos
+    lookup_keys = [c.strip().lower().replace("_", "").replace(" ", "") for c in df.columns]
+    new_names = []
+    for original, key in zip(df.columns, lookup_keys):
+        new_names.append(COLUMN_ALIASES.get(key, original.strip().lower()))
+    df.columns = new_names
     return df
 
 
@@ -52,15 +59,22 @@ def load_one_csv(path: str) -> pd.DataFrame:
     missing = {"estacion_origen", "fecha_origen", "hora_origen",
                "estacion_destino", "fecha_destino", "hora_destino"} - set(df.columns)
     if missing:
-        raise ValueError(f"{path}: faltan columnas esperadas: {missing}")
+        raise ValueError(
+            f"{path}: faltan columnas esperadas: {missing}\n"
+            f"Columnas originales encontradas en el CSV: {list(pd.read_csv(path, nrows=0).columns)}\n"
+            "-> Agrega la variante que falte a COLUMN_ALIASES en este archivo "
+            "(clave = nombre de columna en minúsculas y sin guiones bajos)."
+        )
 
     df["origen_dt"] = pd.to_datetime(
         df["fecha_origen"].astype(str) + " " + df["hora_origen"].astype(str),
         errors="coerce",
+        dayfirst=True,
     )
     df["destino_dt"] = pd.to_datetime(
         df["fecha_destino"].astype(str) + " " + df["hora_destino"].astype(str),
         errors="coerce",
+        dayfirst=True,
     )
 
     df["archivo_origen"] = os.path.basename(path)
@@ -89,10 +103,15 @@ def build_dataset() -> pd.DataFrame:
     df["fecha"] = df["origen_dt"].dt.date
     df["es_fin_de_semana"] = df["origen_dt"].dt.dayofweek >= 5
 
-    # ids de estación como string (evita que pandas los trate como floats con .0)
+    # ids de estación como string (evita que pandas los trate como floats con .0).
+    # Algunos registros traen ids corruptos (ej. "192-193", dos ids pegados) —
+    # se convierten a nulo en vez de tronar, y se reporta cuántos fueron.
     for col in ["estacion_origen", "estacion_destino"]:
-        df[col] = df[col].astype("Int64").astype("string")
-
+        numeric = pd.to_numeric(df[col], errors="coerce")
+        n_corruptos = numeric.isna().sum() - df[col].isna().sum()
+        if n_corruptos > 0:
+            print(f"  aviso: {n_corruptos} valores no numéricos en '{col}' -> convertidos a nulo")
+        df[col] = numeric.astype("Int64").astype("string")
     return df
 
 
