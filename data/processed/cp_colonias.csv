@@ -1,0 +1,346 @@
+cp,nombre,colonias,n_colonias,alcaldia
+01000,San Ángel,San Ángel,1,Álvaro Obregón
+01010,Los Alpes,Los Alpes,1,Álvaro Obregón
+01020,Guadalupe Inn,Guadalupe Inn,1,Álvaro Obregón
+01030,Florida / Axotla,Florida / Axotla,2,Álvaro Obregón
+01040,Campestre,Campestre,1,Álvaro Obregón
+01049,Tlacopac,Tlacopac,1,Álvaro Obregón
+01050,Ex-Hacienda de Guadalupe Chimalistac,Ex-Hacienda de Guadalupe Chimalistac,1,Álvaro Obregón
+01060,Altavista / San Ángel Inn,Altavista / San Ángel Inn,2,Álvaro Obregón
+01070,Chimalistac,Chimalistac,1,Álvaro Obregón
+01080,Progreso Tizapan,Progreso Tizapan,1,Álvaro Obregón
+01089,Ermita Tizapan,Ermita Tizapan,1,Álvaro Obregón
+01090,La Otra Banda y 2 más,La Otra Banda / Tizapan / Loreto,3,Álvaro Obregón
+01100,Pólvora,Pólvora,1,Álvaro Obregón
+01109,La Conchita,La Conchita,1,Álvaro Obregón
+01110,Ampliación El Capulín y 3 más,Ampliación El Capulín / Belém de las Flores / El Capulín / Liberales de 1857,4,Álvaro Obregón
+01120,Acueducto y 3 más,Acueducto / Hidalgo / Las Américas / Cove,4,Álvaro Obregón
+01125,Ampliación Acueducto,Ampliación Acueducto,1,Álvaro Obregón
+01130,Real del Monte y 2 más,Real del Monte / Molino de Santo Domingo / Paraíso,3,Álvaro Obregón
+01139,Reacomodo Pino Suárez,Reacomodo Pino Suárez,1,Álvaro Obregón
+01140,José Maria Pino Suárez / Bellavista,José Maria Pino Suárez / Bellavista,2,Álvaro Obregón
+01150,Tolteca / Cristo Rey,Tolteca / Cristo Rey,2,Álvaro Obregón
+01160,Bosque y 3 más,Bosque / Maria G. de García Ruiz / Isidro Fabela / 1a Victoria,4,Álvaro Obregón
+01170,Abraham M. González / Santa Fe IMSS,Abraham M. González / Santa Fe IMSS,2,Álvaro Obregón
+01180,8 de Agosto y 2 más,8 de Agosto / Carola / San Pedro de los Pinos,3,Álvaro Obregón
+01200,Arturo Martínez,Arturo Martínez,1,Álvaro Obregón
+01220,Mártires de Tacubaya y 5 más,Mártires de Tacubaya / Cuevitas / Bonanza / Zenón Delgado / El Cuernito / La Estrella,6,Álvaro Obregón
+01260,La Palmita y 4 más,La Palmita / Liberación Proletaria / Ampliación La Mexicana / Calzada Jalalpa / La Mexicana,5,Álvaro Obregón
+01270,El Tejocote y 5 más,El Tejocote / Golondrinas 1a Sección / Lomas de Capula / La Presa / Golondrinas / Golondrinas 2a Sección,6,Álvaro Obregón
+01275,Villa Solidaridad,Villa Solidaridad,1,Álvaro Obregón
+01276,El Pirul,El Pirul,1,Álvaro Obregón
+01278,Desarrollo Urbano,Desarrollo Urbano,1,Álvaro Obregón
+01279,Lomas de Becerra,Lomas de Becerra,1,Álvaro Obregón
+01280,La Joya y 4 más,La Joya / Arvide / El Pocito / Francisco Villa / Lomas de Becerra,5,Álvaro Obregón
+01285,El Rodeo,El Rodeo,1,Álvaro Obregón
+01289,Reacomodo El Cuernito,Reacomodo El Cuernito,1,Álvaro Obregón
+01290,Presidentes / Piloto Adolfo López Mateos,Presidentes / Piloto Adolfo López Mateos,2,Álvaro Obregón
+01298,Ampliación Piloto Adolfo López Mateos,Ampliación Piloto Adolfo López Mateos,1,Álvaro Obregón
+01299,2a Ampliación Presidentes / 1a Ampliación Presidentes,2a Ampliación Presidentes / 1a Ampliación Presidentes,2,Álvaro Obregón
+01400,Olivar del Conde 1a Sección / Preconcreto,Olivar del Conde 1a Sección / Preconcreto,2,Álvaro Obregón
+01408,Olivar del Conde 2a Sección,Olivar del Conde 2a Sección,1,Álvaro Obregón
+01410,Palmas / Barrio Norte,Palmas / Barrio Norte,2,Álvaro Obregón
+01419,Minas Cristo Rey,Minas Cristo Rey,1,Álvaro Obregón
+01420,Sacramento / Santa María Nonoalco,Sacramento / Santa María Nonoalco,2,Álvaro Obregón
+01430,Colina del Sur,Colina del Sur,1,Álvaro Obregón
+01450,Hogar y Redención y 2 más,Hogar y Redención / Batallón de San Patricio / Unidad Popular Emiliano Zapata,3,Álvaro Obregón
+01460,Alfonso XIII,Alfonso XIII,1,Álvaro Obregón
+01470,Alfalfar / Molino de Rosas,Alfalfar / Molino de Rosas,2,Álvaro Obregón
+01480,Lomas de Plateros,Lomas de Plateros,1,Álvaro Obregón
+01490,Torres de Mixcoac / La Cascada,Torres de Mixcoac / La Cascada,2,Álvaro Obregón
+01560,Canutillo y 3 más,Canutillo / Ave Real / Canutillo 3a Sección / Canutillo 2a Sección,4,Álvaro Obregón
+01600,Merced Gómez,Merced Gómez,1,Álvaro Obregón
+01610,Profesor J. Arturo López Martínez / Colinas de Tarango,Profesor J. Arturo López Martínez / Colinas de Tarango,2,Álvaro Obregón
+01618,Arcos Centenario / Ex-Hacienda de Tarango,Arcos Centenario / Ex-Hacienda de Tarango,2,Álvaro Obregón
+01619,La Martinica / Rinconada de Tarango,La Martinica / Rinconada de Tarango,2,Álvaro Obregón
+01620,Lomas de Tarango,Lomas de Tarango,1,Álvaro Obregón
+01700,San Agustín del Pueblo Tetelpan y 5 más,San Agustín del Pueblo Tetelpan / La Joyita del Pueblo Tetelpan / Ocotillos del Pueblo Tetelpan / 2a Del Moral del Pueblo Tetelpan / Tetelpan / Tecalcapa del Pueblo Tetelpan,6,Álvaro Obregón
+01710,Las Águilas / Ampliación Alpes,Las Águilas / Ampliación Alpes,2,Álvaro Obregón
+01750,Las Águilas (3 colonias),Las Águilas 1a Sección / Las Águilas 3er Parque / Las Águilas 2o Parque,3,Álvaro Obregón
+01759,Ampliación Las Águilas,Ampliación Las Águilas,1,Álvaro Obregón
+01760,Atlamaya y 2 más,Atlamaya / La Herradura del Pueblo Tetelpan / Flor de María,3,Álvaro Obregón
+01780,Olivar de los Padres / Tizampampano del Pueblo Tetelpan,Olivar de los Padres / Tizampampano del Pueblo Tetelpan,2,Álvaro Obregón
+01789,Miguel Hidalgo,Miguel Hidalgo,1,Álvaro Obregón
+01790,Lomas de San Ángel Inn / Lomas de los Ángeles del Pueblo Tetelpan,Lomas de San Ángel Inn / Lomas de los Ángeles del Pueblo Tetelpan,2,Álvaro Obregón
+02000,Centro de Azcapotzalco,Centro de Azcapotzalco,1,Azcapotzalco
+02040,Del Maestro / San Sebastián,Del Maestro / San Sebastián,2,Azcapotzalco
+02050,Libertad / Santa María Malinalco,Libertad / Santa María Malinalco,2,Azcapotzalco
+02060,Sindicato Mexicano de Electricistas / Un Hogar Para Cada Trabajador,Sindicato Mexicano de Electricistas / Un Hogar Para Cada Trabajador,2,Azcapotzalco
+02070,Del Recreo / Nextengo,Del Recreo / Nextengo,2,Azcapotzalco
+02080,Clavería / Sector Naval,Clavería / Sector Naval,2,Azcapotzalco
+02090,San Álvaro,San Álvaro,1,Azcapotzalco
+02099,Ángel Zimbrón,Ángel Zimbrón,1,Azcapotzalco
+02300,Industrial Vallejo,Industrial Vallejo,1,Azcapotzalco
+02500,Unidad Cuitlahuac,Unidad Cuitlahuac,1,Azcapotzalco
+02519,El Jagüey,El Jagüey,1,Azcapotzalco
+02520,Estación Pantaco,Estación Pantaco,1,Azcapotzalco
+02530,Jardín Azpeitia,Jardín Azpeitia,1,Azcapotzalco
+02600,Pro-Hogar,Pro-Hogar,1,Azcapotzalco
+02630,Coltongo,Coltongo,1,Azcapotzalco
+02640,Monte Alto,Monte Alto,1,Azcapotzalco
+02650,Trabajadores de Hierro,Trabajadores de Hierro,1,Azcapotzalco
+02660,Euzkadi,Euzkadi,1,Azcapotzalco
+02670,Cosmopolita,Cosmopolita,1,Azcapotzalco
+02680,Potrero del Llano,Potrero del Llano,1,Azcapotzalco
+02700,San Miguel Amantla,San Miguel Amantla,1,Azcapotzalco
+02719,Ampliación San Pedro Xalpa,Ampliación San Pedro Xalpa,1,Azcapotzalco
+02720,San Bartolo Cahualtongo / San Antonio,San Bartolo Cahualtongo / San Antonio,2,Azcapotzalco
+02730,San Francisco Tetecala,San Francisco Tetecala,1,Azcapotzalco
+02750,La Providencia / Santiago Ahuizotla,La Providencia / Santiago Ahuizotla,2,Azcapotzalco
+02760,Santa Lucía / Industrial San Antonio,Santa Lucía / Industrial San Antonio,2,Azcapotzalco
+02770,Santa Cruz Acayucan,Santa Cruz Acayucan,1,Azcapotzalco
+02780,Plenitud,Plenitud,1,Azcapotzalco
+02790,Santa Apolonia,Santa Apolonia,1,Azcapotzalco
+02800,Nueva Santa María,Nueva Santa María,1,Azcapotzalco
+02810,Ignacio Allende / Victoria de las Democracias,Ignacio Allende / Victoria de las Democracias,2,Azcapotzalco
+02830,San Bernabé,San Bernabé,1,Azcapotzalco
+02840,Obrero Popular,Obrero Popular,1,Azcapotzalco
+02860,Tlatilco,Tlatilco,1,Azcapotzalco
+02870,San Salvador Xochimanca,San Salvador Xochimanca,1,Azcapotzalco
+02900,Aguilera,Aguilera,1,Azcapotzalco
+02910,Aldana,Aldana,1,Azcapotzalco
+02920,Ampliación Cosmopolita,Ampliación Cosmopolita,1,Azcapotzalco
+02930,Liberación,Liberación,1,Azcapotzalco
+02940,Porvenir,Porvenir,1,Azcapotzalco
+02950,Del Gas,Del Gas,1,Azcapotzalco
+02960,San Francisco Xocotitla,San Francisco Xocotitla,1,Azcapotzalco
+02970,Ampliación Del Gas,Ampliación Del Gas,1,Azcapotzalco
+02980,Patrimonio Familiar / Arenal,Patrimonio Familiar / Arenal,2,Azcapotzalco
+02990,La Raza,La Raza,1,Azcapotzalco
+03000,Piedad Narvarte,Piedad Narvarte,1,Benito Juárez
+03010,Atenor Salas,Atenor Salas,1,Benito Juárez
+03020,Narvarte Poniente,Narvarte Poniente,1,Benito Juárez
+03023,Narvarte Oriente,Narvarte Oriente,1,Benito Juárez
+03100,Del Valle Centro / Insurgentes San Borja,Del Valle Centro / Insurgentes San Borja,2,Benito Juárez
+03103,Del Valle Norte,Del Valle Norte,1,Benito Juárez
+03104,Del Valle Sur,Del Valle Sur,1,Benito Juárez
+03200,Tlacoquemécatl,Tlacoquemécatl,1,Benito Juárez
+03230,Actipan,Actipan,1,Benito Juárez
+03240,Acacias,Acacias,1,Benito Juárez
+03300,Portales Sur,Portales Sur,1,Benito Juárez
+03303,Portales Norte,Portales Norte,1,Benito Juárez
+03310,Santa Cruz Atoyac,Santa Cruz Atoyac,1,Benito Juárez
+03320,Residencial Emperadores,Residencial Emperadores,1,Benito Juárez
+03330,Xoco,Xoco,1,Benito Juárez
+03340,General Pedro María Anaya,General Pedro María Anaya,1,Benito Juárez
+03400,Álamos,Álamos,1,Benito Juárez
+03410,Postal,Postal,1,Benito Juárez
+03420,Miguel Alemán,Miguel Alemán,1,Benito Juárez
+03430,Josefa Ortiz de Domínguez,Josefa Ortiz de Domínguez,1,Benito Juárez
+03440,Niños Héroes,Niños Héroes,1,Benito Juárez
+03500,Nativitas,Nativitas,1,Benito Juárez
+03510,Moderna,Moderna,1,Benito Juárez
+03520,Iztaccihuatl,Iztaccihuatl,1,Benito Juárez
+03530,Villa de Cortes,Villa de Cortes,1,Benito Juárez
+03540,Del Carmen,Del Carmen,1,Benito Juárez
+03550,Zacahuitzco,Zacahuitzco,1,Benito Juárez
+03560,Albert,Albert,1,Benito Juárez
+03570,Portales Oriente,Portales Oriente,1,Benito Juárez
+03580,Miravalle,Miravalle,1,Benito Juárez
+03590,Ermita,Ermita,1,Benito Juárez
+03600,Vértiz Narvarte,Vértiz Narvarte,1,Benito Juárez
+03610,Américas Unidas,Américas Unidas,1,Benito Juárez
+03620,Periodista,Periodista,1,Benito Juárez
+03630,Independencia,Independencia,1,Benito Juárez
+03640,Del Lago,Del Lago,1,Benito Juárez
+03650,Letrán Valle,Letrán Valle,1,Benito Juárez
+03660,San Simón Ticumac,San Simón Ticumac,1,Benito Juárez
+03700,Santa María Nonoalco,Santa María Nonoalco,1,Benito Juárez
+03710,Ciudad de los Deportes,Ciudad de los Deportes,1,Benito Juárez
+03720,Nochebuena,Nochebuena,1,Benito Juárez
+03730,San Juan,San Juan,1,Benito Juárez
+03740,Extremadura Insurgentes,Extremadura Insurgentes,1,Benito Juárez
+03800,San Pedro de los Pinos,San Pedro de los Pinos,1,Benito Juárez
+03810,Nápoles,Nápoles,1,Benito Juárez
+03820,8 de Agosto,8 de Agosto,1,Benito Juárez
+03840,Ampliación Nápoles,Ampliación Nápoles,1,Benito Juárez
+03900,San José Insurgentes,San José Insurgentes,1,Benito Juárez
+03910,Mixcoac,Mixcoac,1,Benito Juárez
+03920,Insurgentes Mixcoac,Insurgentes Mixcoac,1,Benito Juárez
+03930,Merced Gómez,Merced Gómez,1,Benito Juárez
+03940,Crédito Constructor,Crédito Constructor,1,Benito Juárez
+04000,Villa Coyoacán,Villa Coyoacán,1,Coyoacán
+04010,Barrio Santa Catarina,Barrio Santa Catarina,1,Coyoacán
+04020,Barrio La Concepción,Barrio La Concepción,1,Coyoacán
+04030,Barrio San Lucas,Barrio San Lucas,1,Coyoacán
+04040,Parque San Andrés,Parque San Andrés,1,Coyoacán
+04100,Del Carmen,Del Carmen,1,Coyoacán
+04120,San Diego Churubusco / San Mateo,San Diego Churubusco / San Mateo,2,Coyoacán
+04200,Campestre Churubusco,Campestre Churubusco,1,Coyoacán
+04210,Churubusco Country Club,Churubusco Country Club,1,Coyoacán
+04230,Prado Churubusco,Prado Churubusco,1,Coyoacán
+04240,Hermosillo,Hermosillo,1,Coyoacán
+04250,Paseos de Taxqueña,Paseos de Taxqueña,1,Coyoacán
+04260,San Francisco Culhuacán (4 colonias),San Francisco Culhuacán Barrio de La Magdalena / San Francisco Culhuacán Barrio de Santa Ana / San Francisco Culhuacán Barrio de San Juan / San Francisco Culhuacán Barrio de San Francisco,4,Coyoacán
+04310,Romero de Terreros,Romero de Terreros,1,Coyoacán
+04318,Barrio Oxtopulco Universidad,Barrio Oxtopulco Universidad,1,Coyoacán
+04320,Cuadrante de San Francisco y 2 más,Cuadrante de San Francisco / Pedregal de San Francisco / Romero de Terreros,3,Coyoacán
+04330,El Rosedal y 3 más,El Rosedal / Pedregal de Coyoacán / Barrio del Niño Jesús / Pueblo de los Reyes,4,Coyoacán
+04340,Copilco Universidad ISSSTE / Copilco El Bajo,Copilco Universidad ISSSTE / Copilco El Bajo,2,Coyoacán
+04360,Copilco El Alto / Copilco Universidad,Copilco El Alto / Copilco Universidad,2,Coyoacán
+04369,Pedregal de Santo Domingo,Pedregal de Santo Domingo,1,Coyoacán
+04370,Ciudad Jardín / Atlántida,Ciudad Jardín / Atlántida,2,Coyoacán
+04380,El Rosario / Pueblo La Candelaria,El Rosario / Pueblo La Candelaria,2,Coyoacán
+04400,Educación,Educación,1,Coyoacán
+04410,Petrolera Taxqueña / Tlalpan FOVISSSTE,Petrolera Taxqueña / Tlalpan FOVISSSTE,2,Coyoacán
+04420,Ex-Ejido de San Francisco Culhuacán,Ex-Ejido de San Francisco Culhuacán,1,Coyoacán
+04450,El Centinela,El Centinela,1,Coyoacán
+04460,Avante,Avante,1,Coyoacán
+04510,Universidad Nacional Autónoma de México,Universidad Nacional Autónoma de México,1,Coyoacán
+04519,La Otra Banda,La Otra Banda,1,Coyoacán
+06000,Centro (Área 1),Centro (Área 1),1,Cuauhtémoc
+06010,Centro (Área 2),Centro (Área 2),1,Cuauhtémoc
+06020,Centro (Área 3),Centro (Área 3),1,Cuauhtémoc
+06030,Tabacalera,Tabacalera,1,Cuauhtémoc
+06040,Centro (Área 4),Centro (Área 4),1,Cuauhtémoc
+06050,Centro (Área 5),Centro (Área 5),1,Cuauhtémoc
+06060,Centro (Área 6),Centro (Área 6),1,Cuauhtémoc
+06070,Centro (Área 7),Centro (Área 7),1,Cuauhtémoc
+06080,Centro (Área 8),Centro (Área 8),1,Cuauhtémoc
+06090,Centro (Área 9),Centro (Área 9),1,Cuauhtémoc
+06100,Hipódromo,Hipódromo,1,Cuauhtémoc
+06140,Condesa,Condesa,1,Cuauhtémoc
+06170,Hipódromo Condesa,Hipódromo Condesa,1,Cuauhtémoc
+06200,Morelos,Morelos,1,Cuauhtémoc
+06220,Peralvillo,Peralvillo,1,Cuauhtémoc
+06240,Valle Gómez,Valle Gómez,1,Cuauhtémoc
+06250,Ex-Hipódromo de Peralvillo,Ex-Hipódromo de Peralvillo,1,Cuauhtémoc
+06270,Maza,Maza,1,Cuauhtémoc
+06280,Felipe Pescador,Felipe Pescador,1,Cuauhtémoc
+06300,Guerrero,Guerrero,1,Cuauhtémoc
+06350,Buenavista,Buenavista,1,Cuauhtémoc
+06400,Santa María la Ribera,Santa María la Ribera,1,Cuauhtémoc
+06430,Santa María Insurgentes,Santa María Insurgentes,1,Cuauhtémoc
+06450,Atlampa,Atlampa,1,Cuauhtémoc
+06470,San Rafael,San Rafael,1,Cuauhtémoc
+06500,Cuauhtémoc,Cuauhtémoc,1,Cuauhtémoc
+06600,Juárez,Juárez,1,Cuauhtémoc
+06700,Roma Norte,Roma Norte,1,Cuauhtémoc
+06720,Doctores,Doctores,1,Cuauhtémoc
+06760,Roma Sur,Roma Sur,1,Cuauhtémoc
+06780,Buenos Aires,Buenos Aires,1,Cuauhtémoc
+06800,Obrera,Obrera,1,Cuauhtémoc
+06820,Tránsito,Tránsito,1,Cuauhtémoc
+06840,Esperanza,Esperanza,1,Cuauhtémoc
+06850,Asturias,Asturias,1,Cuauhtémoc
+06860,Vista Alegre,Vista Alegre,1,Cuauhtémoc
+06870,Paulino Navarro,Paulino Navarro,1,Cuauhtémoc
+06880,Algarin,Algarin,1,Cuauhtémoc
+06890,Ampliación Asturias,Ampliación Asturias,1,Cuauhtémoc
+06900,Nonoalco Tlatelolco,Nonoalco Tlatelolco,1,Cuauhtémoc
+06920,San Simón Tolnáhuac,San Simón Tolnáhuac,1,Cuauhtémoc
+07020,Tepeyac Insurgentes,Tepeyac Insurgentes,1,Gustavo A. Madero
+07370,Capultitlan,Capultitlan,1,Gustavo A. Madero
+07380,Tlacamaca / Maximino Ávila Camacho,Tlacamaca / Maximino Ávila Camacho,2,Gustavo A. Madero
+07760,Magdalena de las Salinas,Magdalena de las Salinas,1,Gustavo A. Madero
+07770,Panamericana / Ampliación Panamericana,Panamericana / Ampliación Panamericana,2,Gustavo A. Madero
+07780,Defensores de La República / Héroe de Nacozari,Defensores de La República / Héroe de Nacozari,2,Gustavo A. Madero
+07790,Vallejo Poniente / Guadalupe Victoria,Vallejo Poniente / Guadalupe Victoria,2,Gustavo A. Madero
+07800,Industrial,Industrial,1,Gustavo A. Madero
+07810,Estrella,Estrella,1,Gustavo A. Madero
+07840,7 de Noviembre / Guadalupe Tepeyac,7 de Noviembre / Guadalupe Tepeyac,2,Gustavo A. Madero
+07870,Vallejo / Guadalupe Insurgentes,Vallejo / Guadalupe Insurgentes,2,Gustavo A. Madero
+07889,Emiliano Zapata,Emiliano Zapata,1,Gustavo A. Madero
+08200,Viaducto Piedad,Viaducto Piedad,1,Iztacalco
+08210,Nueva Santa Anita,Nueva Santa Anita,1,Iztacalco
+08220,San Pedro,San Pedro,1,Iztacalco
+08230,San Francisco Xicaltongo,San Francisco Xicaltongo,1,Iztacalco
+08240,Santiago Norte,Santiago Norte,1,Iztacalco
+08300,Santa Anita,Santa Anita,1,Iztacalco
+08600,La Asunción,La Asunción,1,Iztacalco
+08610,Zapotla,Zapotla,1,Iztacalco
+08800,Santiago Sur,Santiago Sur,1,Iztacalco
+08810,Reforma Iztaccíhuatl Norte,Reforma Iztaccíhuatl Norte,1,Iztacalco
+08830,Militar Marte,Militar Marte,1,Iztacalco
+08840,Reforma Iztaccíhuatl Sur,Reforma Iztaccíhuatl Sur,1,Iztacalco
+08910,Santa Cruz,Santa Cruz,1,Iztacalco
+08930,Campamento 2 de Octubre,Campamento 2 de Octubre,1,Iztacalco
+09060,Sector Popular / Escuadrón 201,Sector Popular / Escuadrón 201,2,Iztapalapa
+09080,Cacama,Cacama,1,Iztapalapa
+09089,Unidad Modelo,Unidad Modelo,1,Iztapalapa
+09090,Héroes de Churubusco,Héroes de Churubusco,1,Iztapalapa
+09099,Mexicaltzingo,Mexicaltzingo,1,Iztapalapa
+09400,San Juanico Nextipac / El Sifón,San Juanico Nextipac / El Sifón,2,Iztapalapa
+09430,El Triunfo / Apatlaco,El Triunfo / Apatlaco,2,Iztapalapa
+09440,Zacahuitzco y 2 más,Zacahuitzco / San Andrés Tetepilco / El Retoño,3,Iztapalapa
+09450,Banjidal,Banjidal,1,Iztapalapa
+09460,Justo Sierra,Justo Sierra,1,Iztapalapa
+09470,Sinatel,Sinatel,1,Iztapalapa
+09479,Ampliación Sinatel,Ampliación Sinatel,1,Iztapalapa
+09480,El Prado,El Prado,1,Iztapalapa
+09810,Minerva y 3 más,Minerva / Granjas Esmeralda / Progreso del Sur / Los Cipreses,4,Iztapalapa
+10130,Batan Viejo,Batan Viejo,1,La Magdalena Contreras
+10200,San Jerónimo Lídice,San Jerónimo Lídice,1,La Magdalena Contreras
+11000,Lomas de Chapultepec (8 colonias),Lomas de Chapultepec I Sección / Lomas de Chapultepec III Sección / Lomas de Chapultepec VIII Sección / Lomas de Chapultepec VI Sección / Lomas de Chapultepec IV Sección / Lomas de Chapultepec V Sección / Lomas de Chapultepec VII Sección / Lomas de Chapultepec II Sección,8,Miguel Hidalgo
+11040,Molino del Rey,Molino del Rey,1,Miguel Hidalgo
+11100,Bosque de Chapultepec III Sección / Bosque de Chapultepec II Sección,Bosque de Chapultepec III Sección / Bosque de Chapultepec II Sección,2,Miguel Hidalgo
+11200,Lomas Hermosa / Lomas de Sotelo,Lomas Hermosa / Lomas de Sotelo,2,Miguel Hidalgo
+11210,San Lorenzo Tlaltenango,San Lorenzo Tlaltenango,1,Miguel Hidalgo
+11220,Hermanos Serdán / Periodista,Hermanos Serdán / Periodista,2,Miguel Hidalgo
+11230,Argentina Poniente,Argentina Poniente,1,Miguel Hidalgo
+11240,Ignacio Manuel Altamirano,Ignacio Manuel Altamirano,1,Miguel Hidalgo
+11250,10 de Abril,10 de Abril,1,Miguel Hidalgo
+11260,México Nuevo / San Joaquín,México Nuevo / San Joaquín,2,Miguel Hidalgo
+11270,Argentina Antigua,Argentina Antigua,1,Miguel Hidalgo
+11280,Torre Blanca,Torre Blanca,1,Miguel Hidalgo
+11289,Ampliación Torre Blanca,Ampliación Torre Blanca,1,Miguel Hidalgo
+11290,Huíchapan / San Diego Ocoyoacac,Huíchapan / San Diego Ocoyoacac,2,Miguel Hidalgo
+11300,Verónica Anzures,Verónica Anzures,1,Miguel Hidalgo
+11310,Mariano Escobedo,Mariano Escobedo,1,Miguel Hidalgo
+11320,Anáhuac I Sección / Anáhuac II Sección,Anáhuac I Sección / Anáhuac II Sección,2,Miguel Hidalgo
+11330,Un Hogar Para Nosotros,Un Hogar Para Nosotros,1,Miguel Hidalgo
+11340,Santo Tomas,Santo Tomas,1,Miguel Hidalgo
+11350,Plutarco Elías Calles,Plutarco Elías Calles,1,Miguel Hidalgo
+11360,Agricultura,Agricultura,1,Miguel Hidalgo
+11370,Tlaxpana,Tlaxpana,1,Miguel Hidalgo
+11400,Popotla,Popotla,1,Miguel Hidalgo
+11410,Legaria / Tacuba,Legaria / Tacuba,2,Miguel Hidalgo
+11420,Nextitla,Nextitla,1,Miguel Hidalgo
+11430,Ventura Pérez de Alva / Pensil Norte,Ventura Pérez de Alva / Pensil Norte,2,Miguel Hidalgo
+11440,San Juanico / Reforma Pensil,San Juanico / Reforma Pensil,2,Miguel Hidalgo
+11450,Modelo Pensil y 2 más,Modelo Pensil / Ahuehuetes Anáhuac / Peralitos,3,Miguel Hidalgo
+11460,Lago Norte y 3 más,Lago Norte / Lago Sur / Dos Lagos / Los Manzanos,4,Miguel Hidalgo
+11470,Deportivo Pensil / 5 de Mayo,Deportivo Pensil / 5 de Mayo,2,Miguel Hidalgo
+11480,Francisco I Madero / Popo,Francisco I Madero / Popo,2,Miguel Hidalgo
+11489,Ampliación Popo,Ampliación Popo,1,Miguel Hidalgo
+11490,Pensil Sur / Cuauhtémoc Pensil,Pensil Sur / Cuauhtémoc Pensil,2,Miguel Hidalgo
+11500,Irrigación,Irrigación,1,Miguel Hidalgo
+11510,Polanco I Sección,Polanco I Sección,1,Miguel Hidalgo
+11520,Granada,Granada,1,Miguel Hidalgo
+11529,Ampliación Granada,Ampliación Granada,1,Miguel Hidalgo
+11530,Polanco II Sección,Polanco II Sección,1,Miguel Hidalgo
+11540,Polanco III Sección,Polanco III Sección,1,Miguel Hidalgo
+11550,Polanco IV Sección,Polanco IV Sección,1,Miguel Hidalgo
+11560,Polanco V Sección,Polanco V Sección,1,Miguel Hidalgo
+11580,Bosque de Chapultepec I Sección,Bosque de Chapultepec I Sección,1,Miguel Hidalgo
+11590,Anzures,Anzures,1,Miguel Hidalgo
+11600,Residencial Militar,Residencial Militar,1,Miguel Hidalgo
+11610,Manuel Avila Camacho,Manuel Avila Camacho,1,Miguel Hidalgo
+11619,Campo Militar 1,Campo Militar 1,1,Miguel Hidalgo
+11650,Reforma Social,Reforma Social,1,Miguel Hidalgo
+11800,Escandón II Sección / Escandón I Sección,Escandón II Sección / Escandón I Sección,2,Miguel Hidalgo
+11810,16 de Septiembre,16 de Septiembre,1,Miguel Hidalgo
+11820,América,América,1,Miguel Hidalgo
+11830,Daniel Garza,Daniel Garza,1,Miguel Hidalgo
+11840,Ampliación Daniel Garza,Ampliación Daniel Garza,1,Miguel Hidalgo
+11850,San Miguel Chapultepec II Sección / San Miguel Chapultepec I Sección,San Miguel Chapultepec II Sección / San Miguel Chapultepec I Sección,2,Miguel Hidalgo
+11860,Observatorio,Observatorio,1,Miguel Hidalgo
+11870,Tacubaya,Tacubaya,1,Miguel Hidalgo
+11950,Lomas Altas,Lomas Altas,1,Miguel Hidalgo
+15100,Zona Centro,Zona Centro,1,Venustiano Carranza
+15210,Valle Gómez,Valle Gómez,1,Venustiano Carranza
+15220,Popular Rastro / Nicolás Bravo,Popular Rastro / Nicolás Bravo,2,Venustiano Carranza
+15230,Emilio Carranza,Emilio Carranza,1,Venustiano Carranza
+15270,Morelos,Morelos,1,Venustiano Carranza
+15290,10 de Mayo,10 de Mayo,1,Venustiano Carranza
+15350,Ampliación Penitenciaria,Ampliación Penitenciaria,1,Venustiano Carranza
+15800,Jamaica,Jamaica,1,Venustiano Carranza
+15810,Merced Balbuena,Merced Balbuena,1,Venustiano Carranza
+15820,Lorenzo Boturini,Lorenzo Boturini,1,Venustiano Carranza
+15830,Artes Gráficas,Artes Gráficas,1,Venustiano Carranza
+15840,Sevilla,Sevilla,1,Venustiano Carranza
+15850,Magdalena Mixiuhca,Magdalena Mixiuhca,1,Venustiano Carranza
+15860,Pueblo de La Magdalena Mixiuhca,Pueblo de La Magdalena Mixiuhca,1,Venustiano Carranza
+15870,Aarón Sáenz,Aarón Sáenz,1,Venustiano Carranza
+15960,Del Parque,Del Parque,1,Venustiano Carranza
+15990,Álvaro Obregón,Álvaro Obregón,1,Venustiano Carranza
