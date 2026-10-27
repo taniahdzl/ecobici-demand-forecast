@@ -6,7 +6,7 @@ estación (regresión) y cubrirla con oferta (restock).
 ## Estructura del repo
 
 ```
-ecobici-demanda/
+ecobici-demand-forecast/
 ├── data/
 │   ├── raw/            <- CSVs mensuales tal cual se bajan del portal (NO editar a mano)
 │   └── processed/       <- outputs de los scripts (parquet/csv limpios)
@@ -17,10 +17,16 @@ ecobici-demanda/
 ├── src/
 │   ├── ingest.py        <- une los CSVs crudos en un solo dataframe
 │   ├── stations.py      <- descarga GBFS y cruza station_id <-> lat/lon
-│   ├── eda_utils.py     <- funciones reusables de limpieza/gráficas
+│   ├── eda_utils.py     <- funciones reusables de limpieza/gráficas (load_stations_ce: catálogo con la llave de los viajes)
+│   ├── make_figures.py  <- genera figures/01 a 06 (duración, top estaciones, hora, semana/finde, flujo neto, curva)
+│   ├── make_network.py  <- genera figures/07 (grafo de flujos entre estaciones)
+│   ├── map_real_vs_pred.py <- mapa de bicis reales vs demanda esperada (hoy con predicción provisional)
 │   ├── geo.py           <- prepara la capa geográfica (se corre rara vez)
 │   └── geo_utils.py     <- funciones para unir datos con su geografía y dibujar mapas
 ├── figures/             <- gráficas exportadas para las slides
+├── docs/
+│   ├── ESTADO_DEL_PROYECTO.md  <- qué está hecho, decisiones, pendientes y checklist de la rúbrica
+│   └── clase/           <- slides del profesor y temario (solo local, está en .gitignore)
 ├── requirements.txt
 └── README.md
 ```
@@ -29,7 +35,7 @@ ecobici-demanda/
 
 ```bash
 git clone <url-del-repo>
-cd ecobici-demanda
+cd ecobici-demand-forecast
 python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -62,6 +68,7 @@ pip install -r requirements.txt
 
 ## Reglas del repo (para no pisarse el trabajo)
 
+- Las slides del profesor y el temario van en `docs/clase/` (ignorada en `.gitignore`): NO se suben.
 - Los CSVs crudos (`data/raw/*.csv`) NO se suben a GitHub (pesan demasiado,
   ver `.gitignore`) — cada quien los baja localmente.
 - Los notebooks sí se versionan, pero cada persona trabaja en su propia
@@ -185,14 +192,18 @@ igual que una alcaldía (colonia Cuauhtémoc, colonia Juárez).
 - **La alcaldía se deriva del prefijo del CP** (06 = Cuauhtémoc, 03 = Benito
   Juárez, 11 = Miguel Hidalgo, ...). Es una aproximación de SEPOMEX, validada
   para las 6 alcaldías donde hay estaciones.
-- **Algunos viajes no tienen coordenadas** (~4 % de los extremos de viaje
-  en mar–ago 2026). Todos los ids de los datos crudos existen en el
-  catálogo, incluidas las estaciones pareadas como `"158-159"` (son
-  estaciones reales, ej. "CE-158-159 Huatabampo..."). El problema es que
-  `ingest.py` convierte los ids pareados en vacío, así que en
-  `trips_clean.parquet` esos viajes ya no tienen estación. `unir_geo` no
-  borra esas filas: las deja con valores vacíos y muestra una advertencia
-  que separa las filas con id vacío de los ids sin estación.
+- **Estaciones pareadas** (~4 % de los extremos de viaje en mar–ago 2026).
+  Ids como `"158-159"` son UNA estación real del catálogo cuyo `ce` es el par
+  completo (ej. "CE-158-159 Huatabampo..."); ningún número del par existe por
+  separado. Antes `ingest.py` los convertía en vacío; ahora los conserva como
+  texto. **Hay que volver a correr `python src/ingest.py`** para regenerar
+  `trips_clean.parquet`. Solo los `Temporal 1` a `Temporal 4` (y otros no
+  numéricos) quedan sin estación; `unir_geo` no borra esas filas: las deja
+  con valores vacíos y muestra una advertencia.
+- **Siempre cruzar viajes con `ce`.** Las figuras y notebooks que nombraban
+  estaciones con el `station_id` de GBFS mostraban nombres equivocados
+  (ej. el id 208 salía como "CE-457 ..." en vez de "CE-208 Hesiodo-Lamartine").
+  Usar `eda_utils.load_stations_ce()` o `geo_utils.unir_geo`.
 - **Fuentes:**
   - Polígonos: [open-mexico/mexico-geojson](https://github.com/open-mexico/mexico-geojson)
     (licencia MIT, datos de SEPOMEX), archivo `09-Cdmx.geojson` fijado al

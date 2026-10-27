@@ -6,7 +6,7 @@ Corte: 27 de octubre de 2026. Último commit del repo antes de este documento: 2
 
 - **Hecho:** ingesta de datos, catálogo de estaciones, capa geográfica, EDA completo (nulos, outliers, hora, día de la semana, estaciones top, flujo neto, geografía por alcaldía y origen-destino), figuras para las slides y la primera presentación.
 - **Pendiente, y es lo que más pesa en la segunda presentación:** el modelo. No hay todavía código de entrenamiento, ni baseline, ni partición entrenamiento/prueba, ni búsqueda de hiperparámetros, ni resultados. El Modelo vale 40 de 100 puntos.
-- **Hallazgo a corregir antes de modelar:** las estaciones pareadas (ej. `271-272`) son estaciones reales del catálogo, pero `ingest.py` las deja sin estación. Ver la sección "Corrección: estaciones pareadas".
+- **Dos correcciones de ids, ya hechas en el código pero sin recalcular:** (1) las estaciones pareadas (ej. `271-272`) son estaciones reales y `ingest.py` las dejaba sin estación; (2) `make_figures.py`, `make_network.py` y el notebook 00 nombraban estaciones con el `station_id` de GBFS en vez de `ce`. Hay que volver a correr `ingest.py` y los scripts de figuras. Ver "Corrección: ids de estación".
 
 ## Qué hay en el repo
 
@@ -34,7 +34,7 @@ Corte: 27 de octubre de 2026. Último commit del repo antes de este documento: 2
 | Modelo candidato: XGBoost global con la estación como variable | Un solo modelo escala a 677 estaciones y captura interacciones no lineales; SARIMA o Prophet necesitarían un modelo por estación |
 | Partición por fechas (primeros ~80% de los días para entrenar, últimos ~20% para probar) | Predecir el futuro, no el pasado; una partición aleatoria filtraría información |
 
-## Corrección: estaciones pareadas
+## Corrección: ids de estación
 
 Lo que decíamos hasta ahora (comentarios de `ingest.py`, diapositiva de nulos, reporte): "los pares como `271-272` son dos estaciones, y ambos números existen en el catálogo". **Eso es incorrecto.**
 
@@ -52,12 +52,16 @@ Lo que decíamos hasta ahora (comentarios de `ingest.py`, diapositiva de nulos, 
 
 Los pares incluyen estaciones de mucho tráfico: `271-272` tiene 65,140 retiros y 105,805 arribos, y sus retiros superan las 49,839 salidas de la estación que encabeza la tabla "más se vacían" del notebook 00. Hoy esas estaciones están ausentes de las figuras de estaciones top y flujo neto, del origen-destino y de lo que alimentaría al modelo. **No se ha recalculado nada con ellas.**
 
-**Arreglo propuesto:**
+**Segundo error, de llave.** Los ids de los viajes son el `ce`, pero `make_figures.py`, `make_network.py` y las celdas 20, 24, 26 y 27 del notebook 00 los buscaban en `stations.csv` por `station_id` de GBFS. Son ids distintos: el 208 salía como "CE-457 Av. Prado Norte-Explanada" cuando es "CE-208 Hesiodo-Lamartine", y el 711 no tenía nombre. Los rankings por id eran correctos, pero los **nombres** de las figuras 02, 05 y 06, y las coordenadas del grafo (07), estaban mal.
 
-1. En `src/ingest.py`, conservar el id pareado como texto (`"271-272"`) en `estacion_origen` y `estacion_destino`, y dejar vacíos solo los `Temporal N`.
-2. Ya hay llave para unirlos: `stations_geo.ce` incluye los ids pareados.
-3. Volver a correr `ingest.py`, `make_figures.py` y los notebooks, y revisar qué cifras cambian (top de estaciones, flujo neto, porcentajes de las slides).
-4. Corregir la frase en los comentarios de `ingest.py` y en la celda 5 del notebook 00.
+**Cambios hechos (en rama local, sin push):**
+
+1. `src/ingest.py`: conserva el id pareado como texto (`"271-272"`); solo los `Temporal N` y otros no numéricos quedan vacíos. Comentario corregido.
+2. `src/eda_utils.py`: nueva `load_stations_ce()` (catálogo con `station_id = ce`, incluye pares). La usan `make_figures.py` y `make_network.py`.
+3. `src/map_real_vs_pred.py`: une predicción (por `ce`) y estado en vivo (por `station_id`) a través de `stations_geo.csv`.
+4. Notebook 00, celda 5: compara contra `ce` y define `stations` con esa llave. Las celdas 20, 24, 26 y 27 ya la usan sin cambios, pero **hay que volver a ejecutar el notebook** (la celda 5 se guardó sin salida).
+
+**Pendiente del lado de ustedes:** como los CSV y el parquet no están en el repo, nada se recalculó con datos reales (solo se probó con datos sintéticos). Hay que correr `ingest.py`, `make_figures.py`, `make_network.py` y el notebook 00, revisar qué cifras cambian (top de estaciones, flujo neto, % de viajes sin estación) y actualizar las slides afectadas (top, flujo, curva, red y la de nulos).
 
 ## Checklist para la segunda presentación
 
@@ -81,7 +85,8 @@ Rúbrica del profesor (total 100 puntos):
 - [x] Tamaño, periodo y formato (CSV mensual, un registro por viaje)
 - [x] Tipos de atributos (slide "Dataset")
 - [x] Hallazgos del EDA (hora, día de la semana, estaciones, flujo neto, geografía)
-- [ ] Corregir lo de las estaciones pareadas y recalcular las cifras que cambien
+- [x] Corregir lo de las estaciones pareadas y la llave `ce` en el código (hecho; falta volver a correr y actualizar las slides)
+- [ ] Recalcular las cifras que cambien y actualizar slides (top, flujo, curva, red, nulos)
 - [ ] Verificar el número de atributos que dice la slide de dataset ("9.3M × 13"): el notebook muestra 19 columnas en `trips_clean`
 - [ ] Resumir el EDA en pocas slides para dejar tiempo al modelo
 
@@ -110,14 +115,13 @@ Rúbrica del profesor (total 100 puntos):
 
 - [ ] Actualizar el guion de las 3 personas con el contenido nuevo (el actual cubre 15 slides del EDA)
 - [ ] Ensayar con cronómetro; la rúbrica pide que participen los tres
-- [ ] Agregar al repo las presentaciones y el temario de la clase (carpeta sugerida: `docs/clase/`)
+- [ ] Poner las presentaciones y el temario de la clase en `docs/clase/` (carpeta ignorada en `.gitignore`: se quedan solo en local, no se suben)
 
 ## Orden pendiente del repositorio
 
 - `figures/` tiene dos juegos de figuras: las numeradas (`01_` a `07_`, generadas por los scripts) y otras sin número (`flujo.png`, `top_estaciones.png`, `viajes_por_hora.png`, `outliers_duracion.png`, `viajes_totales.png`, `curva_acumulacion.png`, `entre_semana_vs_finde.png`, `duracion_antes_despues.png`, `top_10_estaciones_por_salidas.png`). Probablemente son versiones anteriores; conviene dejar solo las numeradas.
-- El README no menciona `make_figures.py`, `make_network.py` ni `map_real_vs_pred.py`.
+- ~~README sin los scripts nuevos~~ y ~~nombre `ecobici-demanda/`~~: corregidos.
 - `trips_clean.parquet` no se versiona: cualquiera que quiera entrenar el modelo tiene que bajar los CSV a `data/raw/` y correr `python src/ingest.py`.
-- La estructura del README dice `ecobici-demanda/`, pero el repo se llama `ecobici-demand-forecast`.
 
 ## Cómo reproducir
 
