@@ -1,7 +1,45 @@
 # Predicción de demanda Ecobici CDMX
 
-Proyecto de minería y análisis de datos para predecir la demanda de bicis por
-estación (regresión) y cubrirla con oferta (restock).
+Proyecto de minería de datos (equipo de 3) para **predecir la demanda de bicis
+por estación** y apoyar el restock. Es un problema de **regresión
+supervisada**: la variable objetivo son las *salidas por estación y hora*.
+
+## Estado del proyecto
+
+| Etapa | Estado |
+| --- | --- |
+| Ingesta y limpieza de viajes | Listo (`src/ingest.py`) |
+| Catálogo de estaciones y capa geográfica | Listo (`src/stations.py`, `src/geo.py`) |
+| EDA (nulos, outliers, hora, semana/finde, top, flujo neto, geografía, red) | Listo (notebooks `00` y `01`, `figures/`) |
+| **Modelo** (baseline, XGBoost, hiperparámetros, métricas) | **Pendiente**: aún no hay código de entrenamiento |
+| Conclusiones y discusión con resultados reales | Pendiente (depende del modelo) |
+
+## Datos
+
+- **Origen:** portal de datos abiertos de Ecobici
+  (https://ecobici.cdmx.gob.mx/en/open-data/) y feed GBFS para el catálogo de estaciones.
+- **Tamaño y formato:** 6 CSV mensuales (marzo a agosto de 2026), un registro por
+  viaje: 9,325,132 viajes, 677 estaciones, 184 días.
+- **Filtro de duración:** se conservan los viajes de 1 a 45 minutos (límite
+  oficial del servicio): 9,160,389 viajes (98.2 %). Se descartan 163,614 de más
+  de 45 min y 1,129 de menos de 1 min.
+- **Fechas fuera de periodo:** 3 viajes tienen fecha de 2022 a 2024 con
+  duraciones de cientos de miles de minutos; el filtro de duración los elimina.
+- **Estaciones sin id:** solo 722 retiros (0.008 %) y 821 arribos (0.009 %),
+  todos `Temporal 1` a `Temporal 4`, que no están en el catálogo.
+
+## Decisiones de diseño
+
+| Decisión | Justificación |
+| --- | --- |
+| Regresión sobre salidas por estación-hora | La variable objetivo es continua (número de bicis) |
+| Modelo candidato: XGBoost global con la estación como variable | Un solo modelo escala a 677 estaciones y captura interacciones no lineales; SARIMA o Prophet necesitarían un modelo por estación |
+| Partición por fechas (~80 % de los días para entrenar, ~20 % para probar) | Hay que predecir el futuro; una partición aleatoria filtraría información |
+| Baseline: promedio histórico por estación, hora y tipo de día | Referencia mínima que el modelo debe superar; métricas RMSE y MAE |
+| No imputar ids de estación faltantes; se clasifican en `estacion_*_tipo` | El faltante no es aleatorio (depende del tipo de estación) |
+| Cruzar viajes con el catálogo por `ce`, no por `station_id` de GBFS | Son ids distintos; cruzar mal pone viajes en estaciones equivocadas |
+| Estaciones pareadas (`271-272`) se conservan como una sola estación | Son una estación real del catálogo cuyo `ce` es el par completo |
+| Mapas por código postal, con la alcaldía derivada del prefijo | Los polígonos son de CP, no de colonias |
 
 ## Estructura del repo
 
@@ -13,9 +51,11 @@ ecobici-demand-forecast/
 │       ├── cdmx_cp_ecobici.geojson   <- polígonos de código postal recortados al área de Ecobici
 │       ├── stations_geo.csv          <- station_id, ce, nombre, lat, lon, capacidad, cp, alcaldia, colonia
 │       └── cp_colonias.csv           <- cp, nombre, colonias, n_colonias, alcaldia
-├── notebooks/           <- EDA y exploración (un notebook por persona/tema)
+├── notebooks/
+│   ├── 00_template_eda.ipynb   <- EDA general; punto de partida para copiar
+│   └── 01_eda_JL_geo.ipynb     <- EDA geográfico (mapas por CP y alcaldía)
 ├── src/
-│   ├── ingest.py        <- une los CSVs crudos en un solo dataframe
+│   ├── ingest.py        <- une los CSVs crudos en trips_clean.parquet
 │   ├── stations.py      <- descarga GBFS y cruza station_id <-> lat/lon
 │   ├── eda_utils.py     <- funciones reusables de limpieza/gráficas (load_stations_ce: catálogo con la llave de los viajes)
 │   ├── make_figures.py  <- genera figures/01 a 06 (duración, top estaciones, hora, semana/finde, flujo neto, curva)
@@ -25,7 +65,6 @@ ecobici-demand-forecast/
 │   └── geo_utils.py     <- funciones para unir datos con su geografía y dibujar mapas
 ├── figures/             <- gráficas exportadas para las slides
 ├── docs/
-│   ├── ESTADO_DEL_PROYECTO.md  <- qué está hecho, decisiones, pendientes y checklist de la rúbrica
 │   └── clase/           <- slides del profesor y temario (solo local, está en .gitignore)
 ├── requirements.txt
 └── README.md
@@ -43,39 +82,55 @@ pip install -r requirements.txt
 
 ## Flujo de trabajo
 
-1. Bajar los CSVs mensuales del portal oficial:
-   https://ecobici.cdmx.gob.mx/en/open-data/
-   y ponerlos en `data/raw/` (respetar el nombre `YYYY-MM.csv`, o renombrar).
+Desde la raíz del repo, con el venv activo:
 
-2. Correr la ingesta:
+1. Bajar los CSVs mensuales del portal oficial y ponerlos en `data/raw/`
+   (respetar el nombre `YYYY-MM.csv`, o renombrar).
+
+2. Ingesta: `python src/ingest.py` genera `data/processed/trips_clean.parquet`
+   con todos los meses unidos, tipos de dato corregidos y columnas derivadas
+   (ver el diccionario de datos abajo).
+
+3. Catálogo de estaciones: `python src/stations.py` genera
+   `data/processed/stations.csv` (station_id de GBFS, nombre, lat, lon,
+   capacidad) y `station_status_snapshot.csv` (foto del estado en tiempo real).
+
+4. Figuras de las slides:
    ```bash
-   python src/ingest.py
+   python src/make_figures.py    # figures/01 a 06
+   python src/make_network.py    # figures/07
    ```
-   Esto genera `data/processed/trips_clean.parquet` con todos los meses unidos,
-   tipos de dato corregidos y columnas derivadas (duración del viaje, día de
-   la semana, hora, etc).
 
-3. Bajar catálogo de estaciones con coordenadas:
-   ```bash
-   python src/stations.py
-   ```
-   Esto genera `data/processed/stations.csv` (station_id, nombre, lat, lon,
-   capacidad) y `data/processed/station_status_snapshot.csv` (foto del
-   estado en tiempo real al momento de correrlo).
+5. EDA: abrir `notebooks/00_template_eda.ipynb` y ejecutarlo completo (usa el
+   kernel del venv). Para geografía, `notebooks/01_eda_JL_geo.ipynb`.
+   Cada persona trabaja en su propia copia (`notebooks/eda_<nombre>.ipynb`).
 
-4. Trabajar el EDA en `notebooks/`, cada quien puede copiar
-   `notebooks/00_template_eda.ipynb` como punto de partida.
+6. Mapa real vs predicción (provisional): `python src/map_real_vs_pred.py`
+   guarda `figures/mapa_real_vs_prediccion.html`.
+
+## Diccionario de datos (`trips_clean.parquet`)
+
+| Columna | Descripción |
+| --- | --- |
+| `genero`, `edad` | Género y edad declarados del usuario |
+| `bici_id` | Identificador de la bici |
+| `estacion_origen`, `estacion_destino` | Id `ce` de la estación, como texto. Los pares se conservan (`"271-272"`); `Temporal N` queda vacío |
+| `estacion_origen_tipo`, `estacion_destino_tipo` | `valido`, `par_estaciones`, `temporal` u `otro_no_numerico` |
+| `fecha_origen`, `hora_origen`, `fecha_destino`, `hora_destino` | Fecha y hora originales del CSV |
+| `origen_dt`, `destino_dt` | Fecha y hora combinadas (datetime) |
+| `duracion_min` | Duración del viaje en minutos |
+| `hora_del_dia`, `dia_semana`, `fecha`, `es_fin_de_semana` | Derivadas de `origen_dt` |
+| `archivo_origen` | CSV mensual de donde viene el viaje |
 
 ## Reglas del repo (para no pisarse el trabajo)
 
 - Las slides del profesor y el temario van en `docs/clase/` (ignorada en `.gitignore`): NO se suben.
 - Los CSVs crudos (`data/raw/*.csv`) NO se suben a GitHub (pesan demasiado,
-  ver `.gitignore`) — cada quien los baja localmente.
-- Los notebooks sí se versionan, pero cada persona trabaja en su propia
-  copia (`notebooks/eda_<nombre>.ipynb`) para evitar conflictos de merge.
-- Los outputs reusables (`data/processed/*.parquet`) tampoco se suben si
-  pesan mucho; si son chicos (agregados, no el histórico crudo) sí conviene
-  subirlos para que todos partan del mismo punto.
+  ver `.gitignore`); cada quien los baja localmente.
+- `trips_clean.parquet` tampoco se sube (se regenera con `ingest.py`); los
+  archivos chicos de `data/processed/` (catálogo, capa geográfica) sí.
+- Los notebooks sí se versionan, pero cada persona trabaja en su propia copia
+  para evitar conflictos de merge.
 
 ## Capa geográfica (mapas del EDA)
 
@@ -195,10 +250,8 @@ igual que una alcaldía (colonia Cuauhtémoc, colonia Juárez).
 - **Estaciones pareadas** (~4 % de los extremos de viaje en mar–ago 2026).
   Ids como `"158-159"` son UNA estación real del catálogo cuyo `ce` es el par
   completo (ej. "CE-158-159 Huatabampo..."); ningún número del par existe por
-  separado. Antes `ingest.py` los convertía en vacío; ahora los conserva como
-  texto. **Hay que volver a correr `python src/ingest.py`** para regenerar
-  `trips_clean.parquet`. Solo los `Temporal 1` a `Temporal 4` (y otros no
-  numéricos) quedan sin estación; `unir_geo` no borra esas filas: las deja
+  separado. `ingest.py` los conserva como texto. Solo los `Temporal 1` a
+  `Temporal 4` (y otros no numéricos) quedan sin estación; `unir_geo` no borra esas filas: las deja
   con valores vacíos y muestra una advertencia.
 - **Siempre cruzar viajes con `ce`.** Las figuras y notebooks que nombraban
   estaciones con el `station_id` de GBFS mostraban nombres equivocados
