@@ -15,7 +15,8 @@ __pycache__/
 .DS_Store
 
 # Material de la clase (slides del profesor, temario): solo local, no se sube a GitHub
-docs/clase/
+docs/class/
 Mining_Process.pdf
 Machine_Learnig_Review.pdf
 Introduction.pdf
+Neural_Networks.pdf
