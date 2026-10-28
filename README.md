@@ -11,7 +11,7 @@ supervisada**: la variable objetivo son las *salidas por estación y hora*.
 | Ingesta y limpieza de viajes | Listo (`src/ingest.py`) |
 | Catálogo de estaciones y capa geográfica | Listo (`src/stations.py`, `src/geo.py`) |
 | EDA (nulos, outliers, hora, semana/finde, top, flujo neto, geografía, red) | Listo (notebooks `00` y `01`, `figures/`) |
-| **Modelo** (baseline, XGBoost, hiperparámetros, métricas) | **Pendiente**: aún no hay código de entrenamiento |
+| Modelo: 3 referencias simples, regresión lineal, MLP y XGBoost, con hiperparámetros y métricas | Código listo (`src/modelo.py`, `notebooks/02_modelo.ipynb`); falta la corrida final con `RAPIDO = False` |
 | Conclusiones y discusión con resultados reales | Pendiente (depende del modelo) |
 
 ## Datos
@@ -53,11 +53,13 @@ ecobici-demand-forecast/
 │       └── cp_colonias.csv           <- cp, nombre, colonias, n_colonias, alcaldia
 ├── notebooks/
 │   ├── 00_template_eda.ipynb   <- EDA general; punto de partida para copiar
-│   └── 01_eda_JL_geo.ipynb     <- EDA geográfico (mapas por CP y alcaldía)
+│   ├── 01_eda_JL_geo.ipynb     <- EDA geográfico (mapas por CP y alcaldía)
+│   └── 02_modelo.ipynb         <- compara 6 modelos: métricas, sobreajuste, error por hora/alcaldía/estación
 ├── src/
 │   ├── ingest.py        <- une los CSVs crudos en trips_clean.parquet
 │   ├── stations.py      <- descarga GBFS y cruza station_id <-> lat/lon
 │   ├── eda_utils.py     <- funciones reusables de limpieza/gráficas (load_stations_ce: catálogo con la llave de los viajes)
+│   ├── modelo.py        <- tabla estación-hora con rezagos, partición por fechas, baselines, regresión lineal, MLP y XGBoost
 │   ├── make_figures.py  <- genera figures/01 a 06 (duración, top estaciones, hora, semana/finde, flujo neto, curva)
 │   ├── make_network.py  <- genera figures/07 (grafo de flujos entre estaciones)
 │   ├── map_real_vs_pred.py <- mapa de bicis reales vs demanda esperada (hoy con predicción provisional)
@@ -65,7 +67,7 @@ ecobici-demand-forecast/
 │   └── geo_utils.py     <- funciones para unir datos con su geografía y dibujar mapas
 ├── figures/             <- gráficas exportadas para las slides
 ├── docs/
-│   └── clase/           <- slides del profesor y temario (solo local, está en .gitignore)
+│   └── class/           <- slides del profesor y temario (solo local, está en .gitignore)
 ├── requirements.txt
 └── README.md
 ```
@@ -105,7 +107,14 @@ Desde la raíz del repo, con el venv activo:
    kernel del venv). Para geografía, `notebooks/01_eda_JL_geo.ipynb`.
    Cada persona trabaja en su propia copia (`notebooks/eda_<nombre>.ipynb`).
 
-6. Mapa real vs predicción (provisional): `python src/map_real_vs_pred.py`
+6. Modelo: ejecutar `notebooks/02_modelo.ipynb` (Restart & Run All).
+   - Con `RAPIDO = True` (por defecto) hace una corrida corta para validar; los
+     resultados se guardan con sufijo `_rapido`.
+   - Con `RAPIDO = False` hace la corrida final: genera `figures/08` a `11` y
+     `data/processed/resultados_modelo.csv`, `sobreajuste_modelo.csv` y
+     `busqueda_hiperparametros.csv`.
+
+7. Mapa real vs predicción (provisional): `python src/map_real_vs_pred.py`
    guarda `figures/mapa_real_vs_prediccion.html`.
 
 ## Diccionario de datos (`trips_clean.parquet`)
@@ -122,9 +131,13 @@ Desde la raíz del repo, con el venv activo:
 | `hora_del_dia`, `dia_semana`, `fecha`, `es_fin_de_semana` | Derivadas de `origen_dt` |
 | `archivo_origen` | CSV mensual de donde viene el viaje |
 
+Variables del modelo (`src/modelo.py`, una fila por estación-fecha-hora): `salidas` (objetivo),
+`estacion`, `cp`, `alcaldia`, `hora`, `dia_semana`, `es_fin_de_semana`, `lat`, `lon`, `capacidad`,
+y tres de contexto reciente con 7 días o más de rezago: `lag_7d`, `media_4sem` y `nivel_semana`.
+
 ## Reglas del repo (para no pisarse el trabajo)
 
-- Las slides del profesor y el temario van en `docs/clase/` (ignorada en `.gitignore`): NO se suben.
+- Las slides del profesor y el temario van en `docs/class/` (ignorada en `.gitignore`): NO se suben.
 - Los CSVs crudos (`data/raw/*.csv`) NO se suben a GitHub (pesan demasiado,
   ver `.gitignore`); cada quien los baja localmente.
 - `trips_clean.parquet` tampoco se sube (se regenera con `ingest.py`); los

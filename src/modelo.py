@@ -1,0 +1,341 @@
+"""
+Modelo de demanda: salidas por estación y hora (regresión).
+
+Pasos (los usa notebooks/02_modelo.ipynb):
+    1. construir_tabla()   tabla estación x fecha x hora con ceros incluidos
+    2. split_por_fechas()  primeros ~80 % de los días para entrenar, resto prueba
+    3. baseline_promedio() promedio histórico por estación, hora y tipo de día
+    4. entrenar_lineal()   regresión lineal (vista en clase), con variables escaladas
+    5. entrenar_mlp()      perceptrón multicapa (visto en clase), con early stopping
+    6. buscar_hiperparametros() / entrenar_xgb()  XGBoost global
+    7. metricas()          RMSE y MAE
+
+Los ids de estación son el `ce` de los viajes (incluye pares como "271-272").
+"""
+
+import os
+
+import numpy as np
+import pandas as pd
+
+PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
+
+FECHA_INICIO = "2026-03-01"   # el periodo del proyecto; descarta viajes con fechas raras
+FEATURES_CAT = ["estacion", "cp", "alcaldia"]
+FEATURES_REZAGO = ["lag_7d", "media_4sem", "nivel_semana"]
+FEATURES_NUM = ["hora", "dia_semana", "es_fin_de_semana", "lat", "lon", "capacidad"] + FEATURES_REZAGO
+FEATURES = FEATURES_CAT + FEATURES_NUM
+TARGET = "salidas"
+
+
+# ---------------------------------------------------------------- datos
+
+def cargar_validos() -> pd.DataFrame:
+    """Viajes de 1 a 45 min dentro del periodo, solo con las columnas que se usan."""
+    trips = pd.read_parquet(
+        os.path.join(PROCESSED_DIR, "trips_clean.parquet"),
+        columns=["estacion_origen", "origen_dt", "hora_del_dia", "duracion_min"],
+    )
+    ok = (trips["duracion_min"] >= 1) & (trips["duracion_min"] <= 45)
+    ok &= trips["origen_dt"] >= FECHA_INICIO
+    ok &= trips["estacion_origen"].notna()
+    return trips.loc[ok].reset_index(drop=True)
+
+
+def cargar_estaciones() -> pd.DataFrame:
+    geo = pd.read_csv(
+        os.path.join(PROCESSED_DIR, "stations_geo.csv"),
+        dtype={"ce": "string", "cp": "string"},
+    )
+    geo = geo.rename(columns={"ce": "estacion"})
+    return geo[["estacion", "lat", "lon", "capacidad", "cp", "alcaldia"]].drop_duplicates("estacion")
+
+
+def construir_tabla(validos: pd.DataFrame, estaciones: pd.DataFrame) -> pd.DataFrame:
+    """Una fila por estación-fecha-hora, con `salidas` (cero si no hubo viajes).
+
+    Cada estación se considera activa entre su primer y su último viaje en el
+    periodo: así no se rellenan con ceros días en que la estación aún no existía.
+    """
+    v = validos.assign(
+        estacion=validos["estacion_origen"].astype("string"),
+        fecha=validos["origen_dt"].dt.normalize(),
+        hora=validos["hora_del_dia"].astype(int),
+    )
+    conteo = v.groupby(["estacion", "fecha", "hora"]).size().rename(TARGET).reset_index()
+
+    rango = conteo.groupby("estacion")["fecha"].agg(["min", "max"]).reset_index()
+    dias = pd.DataFrame({"fecha": np.sort(conteo["fecha"].unique())})
+    grid = rango.merge(dias, how="cross")
+    grid = grid[(grid["fecha"] >= grid["min"]) & (grid["fecha"] <= grid["max"])]
+    grid = grid[["estacion", "fecha"]].merge(pd.DataFrame({"hora": range(24)}), how="cross")
+
+    tabla = grid.merge(conteo, on=["estacion", "fecha", "hora"], how="left")
+    tabla[TARGET] = tabla[TARGET].fillna(0).astype("int32")
+
+    tabla["dia_semana"] = tabla["fecha"].dt.dayofweek.astype("int8")
+    tabla["es_fin_de_semana"] = (tabla["dia_semana"] >= 5).astype("int8")
+    tabla = tabla.merge(estaciones, on="estacion", how="left")
+
+    for c in FEATURES_CAT:
+        tabla[c] = tabla[c].astype(object).where(tabla[c].notna(), "desconocido").astype(str).astype("category")
+    tabla["hora"] = tabla["hora"].astype("int8")
+    tabla = tabla.sort_values(["fecha", "estacion", "hora"]).reset_index(drop=True)
+    return agregar_rezagos(tabla)
+
+
+def agregar_rezagos(tabla: pd.DataFrame) -> pd.DataFrame:
+    """Variables de contexto reciente, todas con al menos 7 días de rezago.
+
+    - lag_7d:       salidas de la misma estación y hora, 7 días antes
+    - media_4sem:   promedio de la misma estación, hora y día de la semana en las 4 semanas previas (7, 14, 21, 28 días)
+    - nivel_semana: salidas por hora de la estación en la semana d-13 .. d-7 (su nivel de demanda reciente)
+
+    Así el modelo "ve" si el nivel de demanda cambió (verano, vacaciones) sin usar datos que
+    no se conocerían al predecir con una semana de anticipación. Se descartan las filas sin
+    historia suficiente (primera semana de cada estación).
+    """
+    base = tabla[["estacion", "fecha", "hora", TARGET]]
+    lags = []
+    for dias in (7, 14, 21, 28):
+        sh = base.assign(fecha=base["fecha"] + pd.Timedelta(days=dias)).rename(columns={TARGET: f"_l{dias}"})
+        tabla = tabla.merge(sh, on=["estacion", "fecha", "hora"], how="left")
+        lags.append(f"_l{dias}")
+    tabla["lag_7d"] = tabla["_l7"]
+    tabla["media_4sem"] = tabla[lags].mean(axis=1)
+    tabla = tabla.drop(columns=lags)
+
+    diario = base.groupby(["estacion", "fecha"], observed=True)[TARGET].mean().rename("_d").reset_index()
+    diario = diario.sort_values(["estacion", "fecha"])
+    diario["nivel_semana"] = diario.groupby("estacion", observed=True)["_d"].transform(
+        lambda s: s.rolling(7, min_periods=3).mean().shift(7)
+    )
+    tabla = tabla.merge(diario[["estacion", "fecha", "nivel_semana"]], on=["estacion", "fecha"], how="left")
+    tabla = tabla.dropna(subset=FEATURES_REZAGO)
+    for c in FEATURES_REZAGO:
+        tabla[c] = tabla[c].astype("float32")
+    return tabla.reset_index(drop=True)
+
+
+def split_por_fechas(tabla: pd.DataFrame, frac_train: float = 0.8):
+    """Entrena con los primeros días y prueba con los últimos (sin mezclar el tiempo)."""
+    fechas = np.sort(tabla["fecha"].unique())
+    corte = fechas[int(len(fechas) * frac_train)]
+    train = tabla[tabla["fecha"] < corte]
+    test = tabla[tabla["fecha"] >= corte]
+    return train, test, pd.Timestamp(corte)
+
+
+# ---------------------------------------------------------------- baseline
+
+def baseline_promedio(train: pd.DataFrame, test: pd.DataFrame) -> np.ndarray:
+    """Promedio histórico de salidas por estación, hora y tipo de día (entre semana / fin de semana).
+
+    Si una combinación no existe en train, se usa el promedio por hora y tipo de día.
+    """
+    llaves = ["estacion", "hora", "es_fin_de_semana"]
+    prom = train.groupby(llaves, observed=True)[TARGET].mean().rename("pred").reset_index()
+    prom_global = (
+        train.groupby(["hora", "es_fin_de_semana"], observed=True)[TARGET].mean().rename("pred_g").reset_index()
+    )
+    m = test[llaves].merge(prom, on=llaves, how="left").merge(
+        prom_global, on=["hora", "es_fin_de_semana"], how="left"
+    )
+    return m["pred"].fillna(m["pred_g"]).to_numpy()
+
+
+def baseline_semana_pasada(test: pd.DataFrame) -> np.ndarray:
+    """Predice lo mismo que pasó hace 7 días en esa estación y hora."""
+    return test["lag_7d"].to_numpy(dtype=float)
+
+
+def baseline_media_4sem(test: pd.DataFrame) -> np.ndarray:
+    """Predice el promedio de las 4 semanas previas en esa estación, hora y día de la semana."""
+    return test["media_4sem"].to_numpy(dtype=float)
+
+
+# ---------------------------------------------------------------- métricas
+
+def metricas(y_real, y_pred) -> dict:
+    y_real = np.asarray(y_real, dtype=float)
+    y_pred = np.asarray(y_pred, dtype=float)
+    err = y_pred - y_real
+    return {
+        "RMSE": float(np.sqrt(np.mean(err ** 2))),
+        "MAE": float(np.mean(np.abs(err))),
+        "Sesgo": float(np.mean(err)),   # >0: el modelo predice de más; <0: de menos
+    }
+
+
+def error_por(df: pd.DataFrame, y_pred, por: str) -> pd.DataFrame:
+    """RMSE y MAE agrupados por una columna (hora, alcaldia, estacion...)."""
+    d = df[[por, TARGET]].copy()
+    d["err"] = np.asarray(y_pred, dtype=float) - d[TARGET].to_numpy(dtype=float)
+    g = d.groupby(por, observed=True)["err"]
+    return pd.DataFrame({
+        "RMSE": g.apply(lambda e: float(np.sqrt(np.mean(e ** 2)))),
+        "MAE": g.apply(lambda e: float(np.mean(np.abs(e)))),
+        "n": g.size(),
+    })
+
+
+# ---------------------------------------------------------------- XGBoost
+
+PARAM_BASE = dict(
+    tree_method="hist",
+    enable_categorical=True,
+    n_estimators=1000,          # tope; early stopping decide cuántos usar
+    early_stopping_rounds=30,
+    random_state=42,
+    n_jobs=-1,
+)
+
+ESPACIO_BUSQUEDA = {
+    "learning_rate": [0.03, 0.05, 0.1, 0.2],
+    "max_depth": [4, 6, 8, 10],
+    "subsample": [0.6, 0.8, 1.0],
+    "colsample_bytree": [0.6, 0.8, 1.0],
+    "min_child_weight": [1, 5, 20],
+    "objective": ["reg:squarederror", "count:poisson"],   # las salidas son conteos
+}
+
+
+def split_validacion(train: pd.DataFrame, frac: float = 0.8):
+    """Parte train en (fit, validación) por fechas, para elegir hiperparámetros sin mirar test."""
+    fit, val, _ = split_por_fechas(train, frac)
+    return fit, val
+
+
+def buscar_hiperparametros(train: pd.DataFrame, n_iter: int = 12, semilla: int = 42) -> pd.DataFrame:
+    """Random search: prueba n_iter combinaciones y las evalúa en los últimos días de train.
+
+    Regresa una tabla ordenada por RMSE de validación, con el número de árboles
+    que eligió el early stopping (`mejor_iteracion`).
+    """
+    import xgboost as xgb
+    from sklearn.model_selection import ParameterSampler
+
+    fit, val = split_validacion(train)
+    resultados = []
+    for i, params in enumerate(ParameterSampler(ESPACIO_BUSQUEDA, n_iter=n_iter, random_state=semilla)):
+        modelo = xgb.XGBRegressor(**{**PARAM_BASE, **params})
+        modelo.fit(fit[FEATURES], fit[TARGET], eval_set=[(val[FEATURES], val[TARGET])], verbose=False)
+        pred = np.clip(modelo.predict(val[FEATURES]), 0, None)
+        m = metricas(val[TARGET], pred)
+        resultados.append({**params, "mejor_iteracion": int(modelo.best_iteration) + 1, **m})
+        print(f"[{i + 1}/{n_iter}] RMSE val={m['RMSE']:.3f}  MAE val={m['MAE']:.3f}  {params}")
+    return pd.DataFrame(resultados).sort_values("RMSE").reset_index(drop=True)
+
+
+def entrenar_xgb(train: pd.DataFrame, params: dict, n_arboles: int):
+    """Entrena el modelo final con todo train y el número de árboles ya elegido."""
+    import xgboost as xgb
+
+    base = {k: v for k, v in PARAM_BASE.items() if k not in ("n_estimators", "early_stopping_rounds")}
+    modelo = xgb.XGBRegressor(**{**base, "n_estimators": n_arboles, **params})
+    modelo.fit(train[FEATURES], train[TARGET], verbose=False)
+    return modelo
+
+
+# ------------------------------------------- modelos vistos en clase (necesitan escalar)
+
+FEATURES_ONEHOT = ["estacion", "dia_semana", "hora"]
+FEATURES_ESCALAR = ["lat", "lon", "capacidad"] + FEATURES_REZAGO
+FEATURES_BIN = ["es_fin_de_semana"]
+
+
+def preprocesador():
+    """One-hot para las variables categóricas y estandarización (z-score) para las numéricas.
+
+    La regresión lineal y la red neuronal son sensibles a la escala de las
+    variables (ver "Normalization and Scaling" en clase); los árboles no lo son,
+    por eso XGBoost usa las variables tal cual.
+    """
+    from sklearn.compose import ColumnTransformer
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+    return ColumnTransformer([
+        ("cat", OneHotEncoder(handle_unknown="ignore"), FEATURES_ONEHOT),
+        ("num", make_pipeline(SimpleImputer(strategy="median"), StandardScaler()), FEATURES_ESCALAR),
+        ("bin", "passthrough", FEATURES_BIN),
+    ])
+
+
+class ModeloEscalado:
+    """Une el preprocesador ya ajustado con un modelo de sklearn; predice desde la tabla original."""
+
+    def __init__(self, prep, modelo):
+        self.prep = prep
+        self.modelo = modelo
+
+    def predict(self, df: pd.DataFrame) -> np.ndarray:
+        X = self.prep.transform(df[FEATURES])
+        return np.clip(self.modelo.predict(X), 0, None)
+
+
+def entrenar_lineal(train: pd.DataFrame) -> ModeloEscalado:
+    """Regresión lineal (mínimos cuadrados) sobre variables escaladas y one-hot."""
+    from sklearn.linear_model import LinearRegression
+
+    prep = preprocesador()
+    X = prep.fit_transform(train[FEATURES])
+    modelo = LinearRegression().fit(X, train[TARGET].to_numpy(dtype=float))
+    return ModeloEscalado(prep, modelo)
+
+
+def entrenar_mlp(
+    train: pd.DataFrame,
+    capas=(64, 32),
+    lr: float = 1e-3,
+    batch: int = 2048,
+    epocas: int = 15,
+    paciencia: int = 3,
+    max_filas: int = 1_500_000,
+    semilla: int = 42,
+):
+    """Perceptrón multicapa (ReLU, Adam, pérdida MSE) con early stopping por validación.
+
+    - Entrena con los primeros ~80 % de los días de `train` y valida con el 20 % final.
+    - Si hay más de `max_filas` filas, usa una muestra aleatoria para acotar el tiempo.
+    - Cada época es una pasada completa (partial_fit). Se queda con la época de menor
+      RMSE de validación y se detiene si no mejora en `paciencia` épocas.
+
+    Regresa (ModeloEscalado, historial) con RMSE de train y de validación por época.
+    """
+    import copy
+
+    from sklearn.neural_network import MLPRegressor
+
+    fit, val = split_validacion(train)
+    if max_filas and len(fit) > max_filas:
+        fit = fit.sample(max_filas, random_state=semilla)
+    fit = fit.sample(frac=1.0, random_state=semilla)    # mezclar: las filas vienen ordenadas por fecha
+
+    prep = preprocesador()
+    Xf = prep.fit_transform(fit[FEATURES])
+    yf = fit[TARGET].to_numpy(dtype=float)
+    Xv = prep.transform(val[FEATURES])
+    yv = val[TARGET].to_numpy(dtype=float)
+    idx = np.random.default_rng(semilla).choice(len(yf), size=min(200_000, len(yf)), replace=False)
+
+    mlp = MLPRegressor(
+        hidden_layer_sizes=capas, activation="relu", solver="adam",
+        learning_rate_init=lr, batch_size=batch, random_state=semilla,
+    )
+    historial, mejor_rmse, mejor_modelo, sin_mejora = [], np.inf, None, 0
+    for ep in range(1, epocas + 1):
+        mlp.partial_fit(Xf, yf)
+        r_tr = metricas(yf[idx], np.clip(mlp.predict(Xf[idx]), 0, None))["RMSE"]
+        r_val = metricas(yv, np.clip(mlp.predict(Xv), 0, None))["RMSE"]
+        historial.append({"epoca": ep, "RMSE_train": r_tr, "RMSE_val": r_val})
+        print(f"época {ep:2d}  RMSE train={r_tr:.3f}  RMSE val={r_val:.3f}")
+        if r_val < mejor_rmse - 1e-4:
+            mejor_rmse, mejor_modelo, sin_mejora = r_val, copy.deepcopy(mlp), 0
+        else:
+            sin_mejora += 1
+            if sin_mejora >= paciencia:
+                print("early stopping")
+                break
+    return ModeloEscalado(prep, mejor_modelo), pd.DataFrame(historial)
