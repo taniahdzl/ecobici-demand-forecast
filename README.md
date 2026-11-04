@@ -35,6 +35,7 @@ Predicción de salidas por estación-hora. Entrenamiento: 10 mar – 27 jul (2,2
 - La variable más importante es `media_4sem`, seguida de `hora` y `lag_7d`.
 - La estación con más error es `271-272` (RMSE 13.8) y por alcaldía Cuauhtémoc (RMSE 2.93). Las noches (19–23 h) se sobrepredicen.
 - **v2 (calendario + clima):** RMSE 2.393 contra 2.370 de v1; baja un poco el MAE y el sesgo, pero no mejora el RMSE.
+- **Control de variables (`07`):** quitar `cp` y `alcaldia` de XGBoost (para que use la misma información que la regresión lineal y el MLP) no cambia el resultado: RMSE 2.3698 contra 2.3696.
 - **Mes por mes (`06`, mar–sep 2026):** XGBoost tiene el menor RMSE y MAE en los 7 meses; mejora entre 2.4 % (abril) y 8.9 % (agosto) sobre el promedio histórico, 4.6 % en promedio (RMSE promedio 2.475 contra 2.594). El mes más difícil es junio (todos los modelos sobrepredecen). Limitación: los hiperparámetros se eligieron con datos de jun–jul 2026.
 - **Un año de datos (`05`):** con la misma prueba, XGBoost queda en 2.395 (v1: 2.370); más historia no ayuda y el orden de los modelos no cambia.
 
@@ -83,7 +84,8 @@ ecobici-demand-forecast/
 │   ├── 03_modelo_v2.ipynb      <- v2: agrega calendario escolar y clima por hora
 │   ├── 04_horizonte_y_ventanas.ipynb <- predicción a 1 día y validación en 3 ventanas de prueba
 │   ├── 05_modelo_JL_anio.ipynb <- prueba de José Luis con 1 año de datos (sep 2025 – ago 2026)
-│   └── 06_validacion_mensual.ipynb <- XGBoost v1 evaluado mes por mes (cada mes entrena con todo lo anterior)
+│   ├── 06_validacion_mensual.ipynb <- XGBoost v1 evaluado mes por mes (cada mes entrena con todo lo anterior)
+│   └── 07_mismas_variables.ipynb <- control: XGBoost con y sin código postal y alcaldía
 ├── src/
 │   ├── ingest.py        <- une los CSVs crudos en trips_clean.parquet
 │   ├── stations.py      <- descarga GBFS y cruza station_id <-> lat/lon
