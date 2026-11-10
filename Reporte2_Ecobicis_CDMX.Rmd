@@ -1,0 +1,450 @@
+---
+title: "Predicción de demanda de Ecobici CDMX: segundo reporte de avance"
+subtitle: "Minería y Análisis de Datos · ITAM"
+author: "Fernando Barba, José Luis Santiago, Tania Hernández"
+date: "6 de noviembre de 2026"
+lang: es
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: true
+    toc_float: true
+  pdf_document:
+    toc: true
+    number_sections: true
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+# Este reporte se teclea desde la raíz del repositorio (donde está este archivo).
+# Las tablas de resultados se leen de data/processed/*.csv y las gráficas de figures/.
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      out.width = "90%", fig.align = "center")
+
+leer <- function(archivo) {
+  read.csv(file.path("data", "processed", archivo),
+           check.names = FALSE, fileEncoding = "UTF-8", stringsAsFactors = FALSE)
+}
+fig  <- function(archivo) knitr::include_graphics(file.path("figures", archivo))
+f3   <- function(x) formatC(x, format = "f", digits = 3)
+pct  <- function(x, d = 1) paste0(formatC(100 * x, format = "f", digits = d), " %")
+```
+
+# Resumen del avance
+
+Este reporte resume el proyecto hasta la segunda presentación (4 de noviembre de 2026). El objetivo es predecir cuántas bicicletas de Ecobici se retirarán de cada estación en cada hora de la Ciudad de México. Con eso se busca apoyar la planeación del rebalanceo: mover bicicletas de las estaciones donde sobran hacia las que van a necesitarlas.
+
+Lo que ya está hecho:
+
+- Se limpiaron y unieron 6 meses de viajes (marzo a agosto de 2026, 9.3 millones de viajes) y se construyó una tabla con una fila por estación, fecha y hora (2.84 millones de filas).
+- Se compararon seis modelos: tres referencias sin aprendizaje, regresión lineal, red neuronal y XGBoost. **XGBoost fue el mejor**, con un error (RMSE) de 2.370 salidas por estación y hora contra 2.559 del promedio histórico, una mejora de 7.4 %.
+- Se verificó que el resultado se sostiene en siete meses de prueba distintos (mejora promedio de 4.6 %) y se probaron cinco ideas para mejorarlo. Ninguna redujo el error de forma relevante.
+- Se identificaron las limitaciones principales y los pasos siguientes, que incluyen las sugerencias recibidas en la presentación.
+
+| Etapa | Estado | Dónde está |
+|---|---|---|
+| Ingesta y limpieza de viajes | Listo | `src/ingest.py` |
+| Catálogo de estaciones y capa geográfica | Listo | `src/stations.py`, `src/geo.py` |
+| Análisis exploratorio (EDA) | Listo | notebooks `00` y `01`, `figures/01` a `07` |
+| Modelo v1: referencias, regresión lineal, MLP y XGBoost | Listo | `src/modelo.py`, notebook `02` |
+| Modelo v2: calendario escolar y clima | Listo; no mejora el RMSE | notebook `03` |
+| Horizonte de un día y tres ventanas de prueba | Listo | notebook `04` |
+| Prueba con un año de datos | Listo; no mejora | notebook `05` |
+| Validación mes por mes (marzo a septiembre) | Listo | notebook `06` |
+| Control de variables (con y sin código postal y alcaldía) | Listo | notebook `07` |
+| Comparar el mismo mes de años distintos; modelo para estaciones críticas | Por hacer | sección "Limitaciones y próximos pasos" |
+
+# Problema y objetivo
+
+Ecobici opera 677 estaciones registradas en su catálogo. El rebalanceo consiste en mover bicicletas entre estaciones a lo largo del día, y para hacerlo bien hay que anticipar dónde y cuándo van a hacer falta. Según [Expansión](https://politica.expansion.mx/cdmx/2026/08/31/ecobici-personas-que-distribuyen-bicis-a-estaciones-en-cdmx) (31 de agosto de 2026), un equipo de logística revisa la disponibilidad de bicicletas las 24 horas y los balanceadores las mueven en camionetas según la hora del día. Una predicción de la demanda por estación y hora permitiría planear esos movimientos con al menos una semana de anticipación, en lugar de reaccionar cuando una estación ya se vació o se llenó.
+
+Se plantea como un problema de **aprendizaje supervisado de regresión**. La variable objetivo es el número de salidas por estación y hora: una cantidad numérica de conteo, no una categoría. El modelo aprende de viajes anteriores y usa información de calendario, ubicación y comportamiento reciente de cada estación.
+
+Objetivos específicos:
+
+- Cuantificar las salidas de bicicletas por estación, fecha y hora.
+- Anticipar qué estaciones necesitarán reposición y en qué horarios.
+- Modelar cómo cambia la demanda según la hora, el tipo de día, la ubicación y el comportamiento de las semanas anteriores.
+
+No se predicen rutas de camiones ni arribos de bicicletas; los arribos quedan como siguiente paso.
+
+# Datos
+
+## Origen, tamaño y formato
+
+Se utilizan dos fuentes. La primera es el portal de datos abiertos de Ecobici, que publica un archivo CSV por mes con un renglón por viaje. La segunda es el feed GBFS (*General Bikeshare Feed Specification*), del que se obtiene el catálogo de estaciones con su ubicación y capacidad.
+
+| Dato | Cantidad o periodo |
+|---|---|
+| Viajes analizados | 9,325,132 (9.3 millones) |
+| Periodo principal | Marzo a agosto de 2026 (184 días) |
+| Estaciones del catálogo | 677 |
+| Viajes conservados después del filtro de duración | 9,160,389 (98.2 %) |
+| Filas para el modelo | 2,842,368 (estación × fecha × hora) |
+| Datos para experimentos con más historia | 20.3 millones de viajes, de septiembre de 2025 a septiembre de 2026 (13 archivos) |
+
+Cada archivo mensual pesa cerca de 100 MB. Las columnas del archivo original son de cuatro tipos:
+
+| Columna original | Tipo | Qué contiene |
+|---|---|---|
+| `Genero_Usuario`, `Edad_Usuario` | Categórica y numérica | Género y edad declarados |
+| `Bici` | Identificador | Número de la bicicleta |
+| `Ciclo_Estacion_Retiro`, `Ciclo_EstacionArribo` | Identificador (texto) | Número `ce` de la estación de salida y de llegada |
+| `Fecha_Retiro`, `Hora_Retiro`, `Fecha_Arribo`, `Hora_Arribo` | Fecha y hora (texto) | Momento de salida y de llegada |
+
+Para el modelo, los viajes se agrupan por estación, fecha y hora. La observación deja de ser un viaje y pasa a representar la demanda de una estación durante una hora. Los datos limpios se guardan en un archivo Parquet (`trips_clean.parquet`), un formato de tabla comprimido y rápido de leer.
+
+## Hallazgos principales del análisis exploratorio
+
+El análisis exploratorio está en los notebooks `00_template_eda` y `01_eda_JL_geo`. Estos son los resultados que más influyeron en el diseño del modelo.
+
+**1. El 98.2 % de los viajes respeta el límite de 45 minutos.** El histograma de duración tiene una cola larga: 163,614 viajes duraron más de 45 minutos y 1,129 menos de un minuto.
+
+```{r fig-duracion, fig.cap="Distribución de la duración de los viajes. La línea roja marca el límite oficial de 45 minutos."}
+fig("01_duracion_viaje.png")
+```
+
+**2. La demanda sigue el ritmo del trabajo.** Hay un doble pico a las 8 de la mañana (691,294 viajes en el periodo) y a las 18 horas (722,905). De las 00:30 a las 05:00 el sistema está cerrado, así que casi no hay viajes.
+
+```{r fig-hora, fig.cap="Viajes por hora del día, de marzo a agosto de 2026."}
+fig("03_viajes_por_hora.png")
+```
+
+**3. Entre semana y fin de semana son distintos.** El doble pico desaparece el fin de semana y la curva se vuelve más plana, con un máximo hacia el mediodía. Solo 20.3 % de los viajes ocurren en fin de semana.
+
+```{r fig-finde, fig.cap="Viajes por hora, entre semana contra fin de semana."}
+fig("04_semana_vs_finde.png")
+```
+
+**4. La demanda está concentrada.** El 10 % de las estaciones genera 23 % de las salidas. La estación pareada 271-272 (Jesús García y Carlos J. Meneses) es la de mayor uso, con 64,369 salidas. El 88 % de las estaciones está en tres alcaldías: Cuauhtémoc (243), Benito Juárez (213) y Miguel Hidalgo (139).
+
+```{r fig-top, fig.cap="Las diez estaciones con más salidas. La 271-272 se resalta en naranja."}
+fig("02_top_estaciones.png")
+```
+
+**5. La demanda se mueve durante el día, y por eso hace falta rebalancear.** El patrón de flujo neto (llegadas menos salidas) de la mañana se invierte por la tarde: la correlación entre ambos picos, por estación, es de -0.74. Miguel Hidalgo recibe bicicletas en la mañana y las entrega en la tarde, y Benito Juárez hace lo contrario. En la tarde, 9 de las 10 estaciones con mayor déficit están sobre Paseo de la Reforma.
+
+```{r fig-flujo, fig.cap="Flujo neto por estación: estaciones que se vacían (rojo) y que acumulan bicicletas (azul)."}
+fig("05_flujo_neto.png")
+```
+
+```{r fig-acumulacion, fig.cap="Sin rebalanceo, estas tres estaciones se quedarían sin bicicletas en las horas pico."}
+fig("06_curva_acumulacion.png")
+```
+
+**6. Son viajes cortos y locales.** La mitad recorre menos de 1.5 km en línea recta y 71.3 % no sale de su alcaldía. Solo 2.7 % regresa a la misma estación.
+
+De aquí se desprende que la hora, el día de la semana y la ubicación de la estación son variables naturales para el modelo.
+
+# Limpieza de datos
+
+Antes de construir el modelo se tomaron cuatro decisiones de limpieza. Se conservaron los registros compatibles con las reglas de operación del servicio y se corrigió la forma de identificar las estaciones para evitar asignaciones equivocadas.
+
+| Problema | Decisión | Justificación |
+|---|---|---|
+| Duración del viaje | Conservar viajes de 1 a 45 minutos | 45 minutos es el límite del servicio. Se descartan 164,743 viajes: 163,614 mayores a 45 minutos y 1,129 menores a 1 minuto |
+| Estaciones pareadas (ej. 271-272) | Conservar el identificador completo como una sola estación | El par corresponde a una estación real del catálogo; no debe dividirse en dos identificadores |
+| Estaciones temporales 1 a 4 | Excluirlas sin imputar | Son 722 retiros (0.008 %) y no tienen ubicación en el catálogo |
+| Cruce con el catálogo GBFS | Utilizar el número `ce`, no `station_id` | Los identificadores no son equivalentes. El cruce con `station_id` provocaba velocidades superiores a 30 km/h en 31 % de los viajes |
+
+El filtro de duración conserva 98.2 % de los viajes. También elimina tres registros con fechas de 2022 a 2024 y duraciones de cientos de miles de minutos. Las estaciones temporales se excluyen de los conteos por estación porque no tienen una ubicación que permita incorporarlas al modelo.
+
+# Construcción de la tabla para el modelo
+
+Los viajes válidos se agrupan en una tabla con una fila por estación, fecha y hora. La variable objetivo es el número de bicicletas retiradas en cada combinación. Las horas sin viajes se rellenan con cero (35.4 % de las filas). La primera semana de cada estación se elimina porque aún no tiene historia para calcular rezagos. La tabla final contiene 2,842,368 filas, del 10 de marzo al 31 de agosto de 2026.
+
+Las variables explicativas se organizan en tres grupos:
+
+- **Calendario:** hora, día de la semana y si corresponde a fin de semana.
+- **Estación:** latitud, longitud, capacidad, código postal y alcaldía.
+- **Contexto reciente:** salidas de hace siete días (`lag_7d`), promedio de los mismos días y horas de las cuatro semanas anteriores (`media_4sem`) y nivel reciente de la estación (`nivel_semana`).
+
+## Rezagos y prevención de fuga de información
+
+Los rezagos (*lags*) resumen el comportamiento pasado de cada estación. Para predecir una hora, `lag_7d` utiliza lo ocurrido una semana antes; `media_4sem` promedia los cuatro días equivalentes anteriores, y `nivel_semana` resume el comportamiento de los siete días previos al rezago de una semana.
+
+```{r fig-rezagos, fig.cap="Ejemplo de cómo se calculan los rezagos para la estación 27, el martes 5 de mayo de 2026 a las 8 a.m. La semana del 29 de abril al 4 de mayo no se usa."}
+fig("19_rezagos_ejemplo.png")
+```
+
+La regla es que **todos los rezagos miren al menos siete días atrás**. Así, el modelo no usa información que todavía no estaría disponible al momento de predecir, y la predicción puede hacerse con al menos una semana de anticipación. Esto evita la fuga de información (*data leakage*), que consiste en utilizar datos del futuro durante el entrenamiento o la evaluación.
+
+## Entrenamiento, validación y prueba
+
+La división de los datos se hace por fechas, no de forma aleatoria. Esto permite evaluar el modelo con periodos posteriores a los que utilizó para aprender, como sucedería en una aplicación real.
+
+| Conjunto | Periodo | Uso |
+|---|---|---|
+| Entrenamiento | 10 de marzo – 29 de junio | Ajustar los parámetros internos del modelo |
+| Validación | 30 de junio – 27 de julio | Elegir configuraciones e hiperparámetros |
+| Prueba | 28 de julio – 31 de agosto (567,072 filas) | Medir el desempeño final en datos no usados para seleccionar el modelo |
+
+La validación sale del final del periodo de entrenamiento (el último 20 %, del 30 de junio al 27 de julio). Una vez elegidos los hiperparámetros, el modelo final se entrena con todo el periodo anterior a la prueba (10 de marzo – 27 de julio, 2,275,296 filas).
+
+Esta partición se usa para comparar los seis modelos. Además se hace una evaluación mensual adicional con siete periodos de prueba, de marzo a septiembre, en la que cada mes se entrena con la información disponible hasta el mes anterior.
+
+# Modelos
+
+Se compararon seis alternativas: tres referencias sin aprendizaje y tres modelos de regresión. El objetivo es comprobar si un modelo más complejo mejora una predicción sencilla basada en el comportamiento histórico.
+
+| Grupo | Modelo | Cómo predice |
+|---|---|---|
+| Referencia | Promedio histórico | Promedio por estación, hora y tipo de día |
+| Referencia | Semana pasada | Repite las salidas registradas siete días antes |
+| Referencia | Media de 4 semanas | Promedia las cuatro semanas anteriores para el mismo día y hora |
+| Aprendizaje | Regresión lineal | Calcula una suma ponderada de las variables de entrada |
+| Aprendizaje | Red neuronal (MLP) | Aprende relaciones no lineales mediante capas de neuronas |
+| Aprendizaje | XGBoost | Combina árboles de decisión entrenados en secuencia, cada uno corrige los errores del anterior |
+
+Se usa **un solo modelo global** para las 677 estaciones, en lugar de un modelo independiente por estación. Esto permite compartir patrones entre estaciones. Series de tiempo clásicas como SARIMA o Prophet necesitarían un modelo por estación.
+
+## Tratamiento de datos para cada modelo
+
+- **Regresión lineal y MLP:** la hora, el día de la semana y la estación se convierten en columnas de 0 y 1 (*one-hot*). Latitud, longitud, capacidad y los rezagos se estandarizan. Los valores faltantes se imputan con la mediana.
+- **XGBoost:** no necesita escalar las variables, porque los árboles solo comparan "¿mayor o menor que?". Maneja las variables categóricas directamente. Recibe además código postal y alcaldía.
+
+Para comprobar que XGBoost no gana solo por recibir código postal y alcaldía, que la regresión lineal y el MLP no usan, se reentrenó sin ellas y con los mismos hiperparámetros (notebook `07`). El resultado prácticamente no cambia:
+
+```{r tabla-control}
+cv <- leer("resultados_mismas_variables.csv")
+knitr::kable(
+  data.frame(Modelo = cv$modelo,
+             `Número de variables` = cv$variables,
+             `Árboles` = cv$arboles,
+             RMSE = sprintf("%.4f", cv$RMSE),
+             MAE = sprintf("%.4f", cv$MAE),
+             Sesgo = sprintf("%+.4f", cv$Sesgo),
+             check.names = FALSE),
+  align = "lrrrrr",
+  caption = "Control de variables: XGBoost con y sin código postal ni alcaldía (prueba del 28 de julio al 31 de agosto)."
+)
+```
+
+Ambos datos son atributos fijos de cada estación, así que la comparación entre los tres modelos es justa.
+
+## Arquitectura y configuración
+
+La **red neuronal MLP** tiene dos capas ocultas de 64 y 32 neuronas con activación ReLU. Su optimizador es Adam con tasa de aprendizaje de 0.001, función de pérdida de error cuadrático y lotes de 2,048 filas. Se entrenó con una muestra de 1.5 millones de filas para acotar el tiempo, hasta 15 épocas y con *early stopping* de paciencia de tres épocas: se detuvo en la época 13 y la mejor fue la 10.
+
+```{r fig-mlp, fig.cap="Curva de aprendizaje del MLP: error en entrenamiento y validación por época."}
+fig("11_curva_aprendizaje_mlp.png")
+```
+
+**XGBoost** usa árboles de decisión con objetivo Poisson (`count:poisson`), adecuado para conteos no negativos con muchos ceros. Los hiperparámetros se eligieron con una búsqueda aleatoria de 12 combinaciones entre 864 posibles; probar todas habría tardado días con millones de filas. La configuración seleccionada fue:
+
+| Hiperparámetro | Valor elegido |
+|---|---|
+| `learning_rate` | 0.1 |
+| `max_depth` | 8 |
+| `subsample` | 1.0 |
+| `colsample_bytree` | 0.8 |
+| `min_child_weight` | 20 |
+| `objective` | `count:poisson` |
+| Número de árboles | 374 (máximo de 1,000; *early stopping* de 30 rondas) |
+
+# Resultados
+
+XGBoost obtuvo el mejor resultado en el conjunto de prueba: un RMSE de 2.370 contra 2.559 del promedio histórico, una mejora de 7.4 %. También obtuvo el menor MAE.
+
+```{r tabla-resultados}
+res <- leer("resultados_modelo.csv")
+names(res)[1] <- "Modelo"
+mejora <- res[[5]]
+tab_res <- data.frame(
+  Modelo = res$Modelo,
+  RMSE = f3(res$RMSE),
+  MAE = f3(res$MAE),
+  Sesgo = sprintf("%+.3f", res$Sesgo),
+  `Mejora de RMSE` = ifelse(mejora == 0, "referencia", pct(mejora)),
+  check.names = FALSE
+)
+knitr::kable(tab_res, align = "lrrrr",
+             caption = "Desempeño en el conjunto de prueba (28 de julio a 31 de agosto de 2026, 567,072 filas).")
+```
+
+El RMSE penaliza con mayor fuerza los errores grandes, mientras que el MAE resume el error absoluto promedio. El MAE de XGBoost es de 1.383 salidas por estación y hora. El sesgo positivo indica una tendencia a predecir de más; el de XGBoost (+0.060) es menor que el del promedio histórico (+0.171), que se quedó con el nivel de demanda previo al verano.
+
+La mejora parece pequeña, pero la referencia ya es fuerte y la demanda hora por hora tiene mucho azar: salen unas tres bicicletas por estación y hora, y el error medio de XGBoost es de 1.4.
+
+```{r fig-real-pred, fig.cap="Salidas por estación-hora, reales contra predichas, promediadas por hora en el periodo de prueba."}
+fig("08_real_vs_predicho.png")
+```
+
+## Variables más importantes y sobreajuste
+
+La variable más importante para XGBoost es la media de las últimas cuatro semanas (`media_4sem`), seguida de la hora y de las salidas de hace siete días (`lag_7d`). El comportamiento reciente de cada estación aporta más información que su ubicación por sí sola.
+
+```{r fig-importancia, fig.cap="Importancia de variables en XGBoost, medida por ganancia promedio."}
+fig("10_importancia_variables.png")
+```
+
+Si un modelo memorizara los datos de entrenamiento, su error ahí sería mucho menor que en la prueba. Aquí el error de entrenamiento es igual o mayor, así que no se observa sobreajuste:
+
+```{r tabla-sobreajuste}
+s <- leer("sobreajuste_modelo.csv")
+names(s)[1] <- "Modelo"
+knitr::kable(data.frame(Modelo = s$Modelo, Entrenamiento = f3(s[[2]]), Prueba = f3(s[[3]])),
+             align = "lrr", caption = "RMSE en entrenamiento y en prueba.")
+```
+
+La prueba resulta un poco más fácil que el entrenamiento porque en verano hay menos viajes.
+
+# Validación en distintos meses y experimentos
+
+## Validación mes por mes
+
+Para ver si el resultado depende de un solo periodo se hizo una validación *walk-forward*: para evaluar marzo se entrena con todo lo anterior a marzo, para abril con todo lo anterior a abril, y así hasta septiembre, con datos desde septiembre de 2025 (notebook `06`). XGBoost tiene el menor RMSE en los siete meses.
+
+```{r tabla-mensual}
+m <- leer("resultados_mensual.csv")
+meses <- sort(unique(m$mes))
+rmse_de <- function(patron) {
+  sapply(meses, function(k) m$RMSE[m$mes == k & grepl(patron, m$modelo)])
+}
+r_hist <- rmse_de("^Promedio")
+r_med  <- rmse_de("^Media")
+r_xgb  <- rmse_de("^XGBoost")
+mej    <- 1 - r_xgb / r_hist
+tab_m <- data.frame(
+  Mes = c(meses, "Promedio"),
+  `Promedio histórico` = f3(c(r_hist, mean(r_hist))),
+  `Media de 4 semanas` = f3(c(r_med, mean(r_med))),
+  XGBoost = f3(c(r_xgb, mean(r_xgb))),
+  `Mejora de XGBoost` = pct(c(mej, mean(mej))),
+  check.names = FALSE
+)
+knitr::kable(tab_m, align = "lrrrr",
+             caption = "RMSE por mes de prueba. Cada mes se entrena con todo lo anterior.")
+```
+
+La mejora va de 2.4 % (abril) a 8.9 % (agosto), con un promedio de 4.6 %. Septiembre, que ningún experimento previo había usado, también mejora (3.2 %). La media de cuatro semanas pierde contra el promedio histórico en 6 de los 7 meses, así que la ventaja de XGBoost no se debe solo a mirar lo reciente.
+
+```{r fig-mejora-mes, fig.cap="Mejora de RMSE de XGBoost respecto al promedio histórico en cada mes (barras) y demanda media del mes (línea, eje derecho, que empieza en cero)."}
+fig("18_mejora_por_mes.png")
+```
+
+XGBoost ayuda más en julio y agosto, cuando la demanda baja a unas 2.9 salidas por estación y hora: el promedio histórico se queda con el nivel anterior y XGBoost se ajusta con los rezagos. Una advertencia: los hiperparámetros se eligieron con datos de junio y julio, así que para los meses de marzo a junio se eligieron con datos posteriores. El efecto es pequeño porque son fijos y los árboles sí se eligen dentro de cada entrenamiento, pero la validación mensual debe leerse con esto en mente.
+
+```{r fig-rmse-mes, fig.cap="RMSE por mes de prueba para el promedio histórico, la media de cuatro semanas y XGBoost."}
+fig("17_rmse_por_mes.png")
+```
+
+## Experimentos adicionales
+
+Se probaron cinco ideas, cambiando una cosa a la vez.
+
+**Calendario escolar y clima por hora (v2, notebook `03`).** No mejora el RMSE: los rezagos ya reflejan parte de las vacaciones y el clima proviene de un solo punto de la ciudad. Baja un poco el MAE y el sesgo.
+
+```{r tabla-v2}
+v2 <- leer("resultados_modelo_v2.csv")
+names(v2)[1] <- "Modelo"
+knitr::kable(data.frame(Modelo = v2$Modelo, RMSE = f3(v2$RMSE), MAE = f3(v2$MAE),
+                        Sesgo = sprintf("%+.3f", v2$Sesgo)),
+             align = "lrrr", caption = "Efecto de agregar calendario escolar y clima (periodo de prueba principal).")
+```
+
+**Predicción a un día y tres ventanas de prueba (notebook `04`).** Saber lo ocurrido el día anterior mejora poco (RMSE 2.354 contra 2.370) y puede servir si el restock es diario. Además se probó el modelo en tres ventanas de prueba distintas; XGBoost gana en las tres, con mejoras de 2.3 % a 7.4 %.
+
+```{r tabla-ventanas}
+v <- leer("resultados_ventanas.csv")
+tv <- tapply(v$RMSE, list(v$modelo, v$ventana), mean)
+colnames(tv) <- gsub("Aug", "Ago", colnames(tv))
+knitr::kable(round(tv, 3), digits = 3,
+             caption = "RMSE por ventana de prueba. Cada ventana entrena con todo lo anterior.")
+```
+
+**Un año de datos (notebook `05`, de José Luis).** Con la misma prueba (28 de julio a 31 de agosto), entrenar con septiembre de 2025 a agosto de 2026 empeora ligeramente a XGBoost y al MLP. Solo la regresión lineal mejora, por apenas 0.003.
+
+```{r tabla-anio}
+a <- leer("comparacion_justa_6meses_vs_anio.csv")
+a <- a[a[[8]] != 0, ]
+knitr::kable(
+  data.frame(Modelo = a[[1]], `6 meses` = f3(a[[2]]), `1 año` = f3(a[[3]]),
+             Cambio = sprintf("%+.1f %%", 100 * (a[[3]] / a[[2]] - 1)),
+             check.names = FALSE),
+  align = "lrrr",
+  caption = "RMSE en la misma prueba con 6 meses y con 1 año de entrenamiento. Un cambio positivo significa peor resultado."
+)
+```
+
+Esto sugiere que añadir historia más antigua no necesariamente mejora la predicción, porque puede corresponder a otra temporada y el modelo depende del comportamiento reciente. Es una hipótesis que todavía no se probó por separado (ver próximos pasos).
+
+**Control de variables (notebook `07`).** Ver la sección de modelos: quitar código postal y alcaldía no cambia el resultado de XGBoost.
+
+```{r fig-ventanas, fig.cap="RMSE por ventana de prueba para los modelos y variantes del experimento."}
+fig("14_rmse_por_ventana.png")
+```
+
+# Análisis de errores
+
+El error no se distribuye de manera uniforme.
+
+- **Por hora.** En las horas pico de las 8 y las 18 horas se concentran más viajes y también aumentan los errores. Entre las 19 y las 23 horas el modelo tiende a predecir de más.
+- **Por estación.** La 271-272 presenta un RMSE de 13.8 y es la de mayor volumen.
+- **Por alcaldía.** Cuauhtémoc registra el mayor error, con RMSE de 2.93.
+- **Por mes.** En junio todos los modelos sobreestiman las salidas, con un sesgo de +0.19 a +0.23. Una hipótesis es la coincidencia con el Mundial (inauguración en la Ciudad de México el 11 de junio) y el inicio de lluvias, pero **no está comprobada**; habría que revisar la demanda diaria.
+
+```{r fig-error-hora, fig.cap="Error absoluto medio por hora del día en el conjunto de prueba, para cada modelo."}
+fig("09_error_por_hora.png")
+```
+
+# Discusión
+
+## Justificación de las decisiones de diseño
+
+| Decisión | Justificación | Evidencia |
+|---|---|---|
+| Regresión sobre salidas por estación y hora | La variable objetivo es un conteo, no una categoría | Problema |
+| Un modelo global con la estación como variable | Cubre las 677 estaciones, comparte patrones y es más simple que un modelo por estación | Modelos |
+| Partición por fechas, no aleatoria | Hay que predecir el futuro; una partición aleatoria filtraría información | Tabla de entrenamiento, validación y prueba |
+| Rezagos de siete días o más | Evita la fuga de información y permite predecir con una semana de anticipación | Figura de rezagos |
+| Promedio histórico como referencia principal | Es lo que haría un operador sin modelo; un modelo útil debe superarlo | XGBoost lo mejora 7.4 % |
+| XGBoost con objetivo Poisson | Las salidas son conteos no negativos con muchos ceros (35.4 % de las filas) | RMSE 2.370 |
+| Búsqueda aleatoria de 12 de 864 combinaciones | La búsqueda completa tardaría días con millones de filas | Tabla de hiperparámetros |
+| RMSE como métrica principal, con MAE y sesgo | El RMSE castiga los errores grandes, el MAE es fácil de interpretar y el sesgo dice si se predice de más o de menos | Tabla de resultados |
+| Mismas variables para los tres modelos | Evitar que XGBoost gane por recibir información adicional | RMSE 2.3698 contra 2.3696 |
+| Validación mes por mes | Comprobar que el resultado no depende de un solo periodo | Gana en 7 de 7 meses |
+| Cruzar viajes y catálogo con `ce`, conservar pares, excluir estaciones temporales | Evitar asignar viajes a estaciones equivocadas | 31 % de viajes a más de 30 km/h con el cruce incorrecto |
+| MLP entrenado con 1.5 millones de filas | Acotar el tiempo de cómputo | *Early stopping* en la época 13 |
+
+## A qué se debe el éxito y las limitaciones
+
+XGBoost supera al promedio histórico porque, además de los patrones por estación, hora y tipo de día que ya captura la referencia, aprovecha el comportamiento reciente de cada estación, sobre todo mediante la media de las últimas cuatro semanas. La mejora es moderada porque el promedio histórico ya es una referencia fuerte y porque la demanda por estación y hora conserva mucha variabilidad que las variables disponibles no explican.
+
+Los experimentos muestran que agregar más variables o más meses de información no garantiza una mejora: el calendario escolar y el clima no redujeron el RMSE, un año de datos empeoró el resultado de XGBoost en la prueba principal, y predecir a un día mejoró el RMSE solo ligeramente. Esto apunta a que el límite está en el azar de cada hora y no en las variables que faltan.
+
+## Conclusiones
+
+- XGBoost supera al promedio histórico en los siete meses evaluados, con una mejora promedio del RMSE de 4.6 %.
+- La información reciente es la característica más importante: la media de las cuatro semanas anteriores pesa más que las variables geográficas.
+- Más variables y más historia no produjeron mejoras relevantes. La variabilidad de la demanda en cada hora sigue siendo una limitación importante.
+
+# Limitaciones y próximos pasos
+
+## Limitaciones
+
+- **Demanda atendida, no demanda real.** El modelo predice salidas observadas. Si una estación está vacía no se registran salidas aunque haya personas que quieran tomar una bicicleta, y el modelo puede interpretar como demanda baja una situación en la que faltó oferta.
+- **Mucho azar.** En promedio se registran alrededor de tres salidas por estación y hora, por lo que unas cuantas bicicletas cambian de manera importante el error.
+- **Eventos externos.** El modelo no incorpora partidos, marchas ni cierres de calles.
+- **Selección de hiperparámetros.** Se hizo con datos de junio y julio, lo que afecta ligeramente la lectura de la validación mensual.
+- **Clima de un solo punto.** La serie de clima corresponde a un solo punto de la ciudad.
+
+## Próximos pasos
+
+Los primeros cuatro vienen de la discusión del reporte; los dos últimos surgieron de los comentarios recibidos en la segunda presentación.
+
+1. Revisar la demanda diaria de junio para entender por qué todos los modelos sobreestimaron las salidas.
+2. Agregar información de eventos y cercanía a estaciones de Metro y Metrobús.
+3. Probar modelos por tipo de estación, por ejemplo residencial, de oficinas o turística.
+4. Predecir también los arribos para estimar el inventario de cada estación y planear el rebalanceo completo.
+5. **Comparar el mismo mes de años distintos** (por ejemplo enero de 2025 contra enero de 2026; para los meses que falten, 2024 contra 2025). Esto pondría a prueba la hipótesis de que los datos viejos pesan menos por ser de otra temporada. Por el volumen de datos se propone entrenar en Google Colab con GPU; falta revisar la capacidad de almacenamiento y las horas de entrenamiento disponibles.
+6. **Probar un modelo para las estaciones más críticas.** Primero se revisaría si el sesgo positivo se concentra en las estaciones de mayor volumen. Si es así, se compararía el modelo global contra uno específico para esas estaciones, evaluando solo en ellas y definiendo "críticas" con datos de entrenamiento únicamente.
+
+# Fuentes
+
+- Portal de datos abiertos de Ecobici CDMX: <https://ecobici.cdmx.gob.mx/es/datos-abiertos>
+- Feed GBFS de Ecobici: <https://gbfs.mex.lyftbikes.com>
+- Expansión (31 de agosto de 2026), "Ecobici: personas que distribuyen bicis a estaciones en CDMX": <https://politica.expansion.mx/cdmx/2026/08/31/ecobici-personas-que-distribuyen-bicis-a-estaciones-en-cdmx>
+- Presentación del proyecto: "Predicción de demanda de Ecobici en la Ciudad de México", segunda entrega, 4 de noviembre de 2026.
+- Repositorio del proyecto: <https://github.com/taniahdzl/ecobici-demand-forecast>
