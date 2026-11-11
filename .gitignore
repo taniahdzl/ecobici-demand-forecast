@@ -23,3 +23,7 @@ Neural_Networks.pdf
 
 # Corridas rápidas de prueba del notebook de modelo (no son resultados finales)
 data/processed/*_rapido.csv
+
+# Notebook 08 (mismo mes de otro año): CSV de años anteriores y caché por mes
+data/raw/anteriores/
+data/processed/cache_mensual/
