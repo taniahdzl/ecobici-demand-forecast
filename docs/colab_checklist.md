@@ -129,3 +129,11 @@ Solo si los tiempos locales no alcanzan o se agrega algo pesado. El repositorio 
 - **Modelo para las estaciones críticas.** Es el otro comentario de los profesores. Primero hay que revisar si el sesgo positivo se concentra en las estaciones de mayor volumen; está planteado como diagnóstico en el reporte.
 - **Búsqueda de hiperparámetros por mes.** Aquí se reutilizan los de la versión 1. Es lo que más justificaría Colab.
 - **Limitaciones del experimento:** un mes de entrenamiento solo ve un ciclo mensual; el catálogo de estaciones es el de 2026, así que las estaciones que ya no existen entran sin latitud, longitud ni capacidad; y los hiperparámetros se eligieron con datos de 2026, lo que favorece un poco a los casos que entrenan con 2026.
+
+## Notebook 11 (última semana de octubre)
+
+- Necesita `data/raw/2026-10.csv` (los meses 2025-09 a 2026-09 ya están). Si no está, el notebook se detiene y lo dice.
+- Módulo: `src/ultima_semana.py` (usa `src/mismo_mes.py` y `src/modelo.py`). Con 14 meses de historia la tabla pesa varios GB de RAM; si falta memoria, pon `DESDE = "2026-03"`.
+- Tiempo estimado en CPU: unos 10 a 15 minutos (dos XGBoost, regresión lineal y baselines). Con `USAR_MLP = True` suma varios minutos más.
+- En Colab: sube a Drive `src/`, el notebook, `data/processed/stations_geo.csv`, `data/processed/busqueda_hiperparametros.csv` y los CSV de `data/raw/` (o los parquet de `data/processed/cache_mensual/`). `MM.configurar_dispositivo()` detecta la GPU y XGBoost usa `cuda`.
+- Ensayo sin octubre: en la celda de configuración, descomentar la línea que usa la semana del 21 al 27 de septiembre.
